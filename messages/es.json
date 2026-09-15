@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "title": "Chatteia",
+    "description": "Sigue el chat de cualquier canal de Twitch en tiempo real."
+  },
+  "settings": {
+    "title": "Configuración",
+    "language": "Idioma",
+    "open": "Abrir configuración"
+  },
+  "languageSwitcher": {
+    "label": "Idioma",
+    "srLabel": "Cambiar idioma"
+  },
+  "home": {
+    "title": "Chatteia",
+    "subtitle": "Escribe el nombre de un canal de Twitch para seguir el chat.",
+    "channelLabel": "Canal de Twitch",
+    "channelPlaceholder": "ej: turbao8 o www.twitch.tv/turbao8",
+    "submit": "Abrir chat",
+    "footer": "Sin inicio de sesión. Sin registro. ¡Solo si quieres!",
+    "errorInvalidChannel": "Escribe un nombre de canal o un enlace válido de Twitch."
+  },
+  "chatStatus": {
+    "idle": "Iniciando…",
+    "connecting": "Conectando…",
+    "connected": "Conectado",
+    "reconnecting": "Reconectando…",
+    "error": "Error de conexión",
+    "closed": "Desconectado"
+  },
+  "chat": {
+    "backToHome": "Inicio",
+    "addChannel": "Añadir canal al multi-chat",
+    "addChannelPlaceholder": "Añadir canal…",
+    "addChannelSubmit": "Añadir",
+    "removeChannel": "Quitar canal",
+    "searchPlaceholder": "Buscar mensajes…",
+    "switchChannelPlaceholder": "Ir al canal…",
+    "switchChannelSubmit": "Ir",
+    "viewersLive": "{count} espectadores en vivo",
+    "waitingMessages": "Esperando mensajes del chat…",
+    "connectingToChat": "Conectando al chat…",
+    "newMessagesButton": "↓ Nuevos mensajes"
+  },
+  "multiChat": {
+    "addChannel": "Añadir canal",
+    "addChannelPlaceholder": "añadir canal...",
+    "addChannelSubmit": "Añadir canal",
+    "removeChannelAria": "Quitar #{channel}",
+    "connectedCount": "{connected}/{total} conectados",
+    "noChannels": "No se añadió ningún canal.",
+    "waitingMessages": "Esperando mensajes de los chats…"
+  }
+}

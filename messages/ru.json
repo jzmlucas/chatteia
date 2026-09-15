@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "title": "Chatteia",
+    "description": "Следите за чатом любого канала Twitch в реальном времени."
+  },
+  "settings": {
+    "title": "Настройки",
+    "language": "Язык",
+    "open": "Открыть настройки"
+  },
+  "languageSwitcher": {
+    "label": "Язык",
+    "srLabel": "Изменить язык"
+  },
+  "home": {
+    "title": "Chatteia",
+    "subtitle": "Введите имя канала Twitch, чтобы следить за чатом.",
+    "channelLabel": "Канал Twitch",
+    "channelPlaceholder": "например: turbao8 или www.twitch.tv/turbao8",
+    "submit": "Открыть чат",
+    "footer": "Без входа. Без регистрации. Только если вы сами захотите!",
+    "errorInvalidChannel": "Введите корректное имя канала или ссылку Twitch."
+  },
+  "chatStatus": {
+    "idle": "Запуск…",
+    "connecting": "Подключение…",
+    "connected": "Подключено",
+    "reconnecting": "Переподключение…",
+    "error": "Ошибка подключения",
+    "closed": "Отключено"
+  },
+  "chat": {
+    "backToHome": "Главная",
+    "addChannel": "Добавить канал в мульти-чат",
+    "addChannelPlaceholder": "Добавить канал…",
+    "addChannelSubmit": "Добавить",
+    "removeChannel": "Удалить канал",
+    "searchPlaceholder": "Поиск сообщений…",
+    "switchChannelPlaceholder": "Перейти к каналу…",
+    "switchChannelSubmit": "Перейти",
+    "viewersLive": "{count} зрителей в эфире",
+    "waitingMessages": "Ожидание сообщений чата…",
+    "connectingToChat": "Подключение к чату…",
+    "newMessagesButton": "↓ Новые сообщения"
+  },
+  "multiChat": {
+    "addChannel": "Добавить канал",
+    "addChannelPlaceholder": "добавить канал...",
+    "addChannelSubmit": "Добавить канал",
+    "removeChannelAria": "Удалить #{channel}",
+    "connectedCount": "{connected}/{total} подключено",
+    "noChannels": "Каналы не добавлены.",
+    "waitingMessages": "Ожидание сообщений чатов…"
+  }
+}
