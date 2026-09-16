@@ -1,6 +1,5 @@
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { refreshKickAccessToken } from "./oauth";
+import { supabaseAdmin } from "@/lib/supabase/server";
 
 export type KickToken = {
   broadcasterUserId: string;
@@ -12,64 +11,149 @@ export type KickToken = {
   scope: string[];
 };
 
-type KickTokenStore = Record<string, KickToken>;
+type KickTokenRow = {
+  broadcaster_user_id: string;
+  username: string;
+  access_token: string;
+  refresh_token: string | null;
+  token_type: string;
+  expires_at: number | string;
+  scope: string[] | null;
+};
 
-const filePath = path.join(process.cwd(), ".kick-tokens.json");
-
-async function readStore(): Promise<KickTokenStore> {
-  try {
-    const content = await fs.readFile(filePath, "utf8");
-    return JSON.parse(content) as KickTokenStore;
-  } catch {
-    return {};
-  }
-}
-
-async function writeStore(store: KickTokenStore) {
-  await fs.writeFile(
-    filePath,
-    JSON.stringify(store, null, 2),
-    "utf8"
-  );
+function rowToToken(row: KickTokenRow): KickToken {
+  return {
+    broadcasterUserId: String(row.broadcaster_user_id),
+    username: row.username,
+    accessToken: row.access_token,
+    refreshToken: row.refresh_token,
+    tokenType: row.token_type,
+    expiresAt: Number(row.expires_at),
+    scope: Array.isArray(row.scope) ? row.scope : [],
+  };
 }
 
 export async function saveKickToken(token: KickToken) {
-  const store = await readStore();
+  const { error } = await supabaseAdmin
+      .from("kick_tokens")
+      .upsert(
+          {
+            broadcaster_user_id: token.broadcasterUserId,
+            username: token.username,
+            access_token: token.accessToken,
+            refresh_token: token.refreshToken,
+            token_type: token.tokenType,
+            expires_at: token.expiresAt,
+            scope: [...new Set(token.scope)],
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "broadcaster_user_id",
+          }
+      );
 
-  store[token.broadcasterUserId] = {
-    ...token,
-    scope: [...new Set(token.scope)],
-  };
+  if (error) {
+    console.error("[KICK] Erro ao salvar token no Supabase:", error);
 
-  await writeStore(store);
+    throw new Error(
+        `Falha ao salvar token da KICK no Supabase: ${error.message}`
+    );
+  }
 }
 
 export async function getKickToken(
-  broadcasterUserId: string
+    broadcasterUserId: string
 ) {
-  const store = await readStore();
+  const { data, error } = await supabaseAdmin
+      .from("kick_tokens")
+      .select(
+          `
+        broadcaster_user_id,
+        username,
+        access_token,
+        refresh_token,
+        token_type,
+        expires_at,
+        scope
+      `
+      )
+      .eq("broadcaster_user_id", broadcasterUserId)
+      .maybeSingle();
 
-  return store[broadcasterUserId] ?? null;
+  if (error) {
+    console.error(
+        "[KICK] Erro ao buscar token no Supabase:",
+        error
+    );
+
+    throw new Error(
+        `Falha ao buscar token da KICK: ${error.message}`
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return rowToToken(data as KickTokenRow);
 }
 
 export async function getAllKickTokens() {
-  const store = await readStore();
+  const { data, error } = await supabaseAdmin
+      .from("kick_tokens")
+      .select(
+          `
+        broadcaster_user_id,
+        username,
+        access_token,
+        refresh_token,
+        token_type,
+        expires_at,
+        scope
+      `
+      )
+      .order("username", {
+        ascending: true,
+      });
 
-  return Object.values(store);
+  if (error) {
+    console.error(
+        "[KICK] Erro ao buscar tokens no Supabase:",
+        error
+    );
+
+    throw new Error(
+        `Falha ao buscar tokens da KICK: ${error.message}`
+    );
+  }
+
+  return (data ?? []).map((row) =>
+      rowToToken(row as KickTokenRow)
+  );
 }
 
 export async function deleteKickToken(
-  broadcasterUserId: string
+    broadcasterUserId: string
 ) {
-  const store = await readStore();
+  const { error } = await supabaseAdmin
+      .from("kick_tokens")
+      .delete()
+      .eq("broadcaster_user_id", broadcasterUserId);
 
-  delete store[broadcasterUserId];
+  if (error) {
+    console.error(
+        "[KICK] Erro ao remover token do Supabase:",
+        error
+    );
 
-  await writeStore(store);
+    throw new Error(
+        `Falha ao remover token da KICK: ${error.message}`
+    );
+  }
 }
 
 export async function getValidKickToken(
-  broadcasterUserId: string
+    broadcasterUserId: string
 ) {
   const token = await getKickToken(broadcasterUserId);
 
@@ -89,22 +173,22 @@ export async function getValidKickToken(
 
   try {
     const refreshed = await refreshKickAccessToken(
-      token.refreshToken
+        token.refreshToken
     );
 
     const nextToken: KickToken = {
       ...token,
       accessToken: refreshed.access_token,
       refreshToken:
-        refreshed.refresh_token ?? token.refreshToken,
+          refreshed.refresh_token ?? token.refreshToken,
       tokenType: refreshed.token_type,
       expiresAt:
-        Date.now() + refreshed.expires_in * 1000,
+          Date.now() + refreshed.expires_in * 1000,
       scope: refreshed.scope
-        ? refreshed.scope
-            .split(" ")
-            .filter(Boolean)
-        : token.scope,
+          ? refreshed.scope
+              .split(" ")
+              .filter(Boolean)
+          : token.scope,
     };
 
     await saveKickToken(nextToken);
@@ -112,8 +196,8 @@ export async function getValidKickToken(
     return nextToken;
   } catch (error) {
     console.error(
-      "[KICK] Falha ao renovar token:",
-      error
+        "[KICK] Falha ao renovar token:",
+        error
     );
 
     return token;
@@ -121,21 +205,43 @@ export async function getValidKickToken(
 }
 
 export async function getKickTokenByChannel(
-  channel: string
+    channel: string
 ) {
   const normalized = channel
-    .trim()
-    .replace(/^#/, "")
-    .toLowerCase();
+      .trim()
+      .replace(/^#/, "")
+      .toLowerCase();
 
-  const tokens = await getAllKickTokens();
+  const { data, error } = await supabaseAdmin
+      .from("kick_tokens")
+      .select(
+          `
+        broadcaster_user_id,
+        username,
+        access_token,
+        refresh_token,
+        token_type,
+        expires_at,
+        scope
+      `
+      )
+      .ilike("username", normalized)
+      .maybeSingle();
 
-  return (
-    tokens.find(
-      (token) =>
-        token.username
-          .trim()
-          .toLowerCase() === normalized
-    ) ?? null
-  );
+  if (error) {
+    console.error(
+        "[KICK] Erro ao buscar canal no Supabase:",
+        error
+    );
+
+    throw new Error(
+        `Falha ao buscar canal da KICK: ${error.message}`
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return rowToToken(data as KickTokenRow);
 }
