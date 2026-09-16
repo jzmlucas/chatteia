@@ -1,22 +1,17 @@
 import { getRequestConfig } from "next-intl/server";
-
-import {
-    defaultLocale,
-    isAppLocale,
-} from "./config";
+import { notFound } from "next/navigation";
+import { isAppLocale } from "./config";
 
 export default getRequestConfig(async ({ requestLocale }) => {
-    const requested = await requestLocale;
+  const requested = await requestLocale;
+  const locale = requested && isAppLocale(requested) ? requested : undefined;
 
-    const locale =
-        requested && isAppLocale(requested)
-            ? requested
-            : defaultLocale;
+  if (!locale) {
+    notFound();
+  }
 
-    return {
-        locale,
-        messages: (
-            await import(`../messages/${locale}.json`)
-        ).default,
-    };
+  return {
+    locale,
+    messages: (await import(`../messages/${locale}.json`)).default,
+  };
 });

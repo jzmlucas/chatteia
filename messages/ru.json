@@ -51,5 +51,9 @@
     "connectedCount": "{connected}/{total} подключено",
     "noChannels": "Каналы не добавлены.",
     "waitingMessages": "Ожидание сообщений чатов…"
+  },
+  "obs": {
+    "copyLink": "+ OBS",
+    "linkCopied": "Ссылка скопирована!"
   }
 }

@@ -1,34 +1,63 @@
+import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages } from "next-intl/server";
+import { getMessages, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
+import "../globals.css";
+import { locales, isAppLocale, type AppLocale } from "@/i18n/config";
 
-import {
-    locales,
-    type AppLocale,
-} from "@/i18n/config";
+export function generateStaticParams() {
+  return locales.map((locale) => ({ locale }));
+}
 
-type Props = {
-    children: React.ReactNode;
-    params: Promise<{
-        locale: string;
-    }>;
-};
+export async function generateMetadata({
+                                         params,
+                                       }: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+
+  if (!isAppLocale(locale)) {
+    notFound();
+  }
+
+  const t = await getTranslations({ locale, namespace: "meta" });
+
+  return {
+    title: t("title"),
+    description: t("description"),
+    icons: {
+      icon: [
+        { url: "/chatteia16.png", sizes: "16x16", type: "image/png" },
+        { url: "/chatteia32.png", sizes: "32x32", type: "image/png" },
+      ],
+      apple: "/chatteia.png",
+    },
+  };
+}
 
 export default async function LocaleLayout({
-                                               children,
-                                               params,
-                                           }: Props) {
-    const { locale } = await params;
+                                             children,
+                                             params,
+                                           }: {
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale: rawLocale } = await params;
 
-    if (!locales.includes(locale as AppLocale)) {
-        notFound();
-    }
+  if (!isAppLocale(rawLocale)) {
+    notFound();
+  }
 
-    const messages = await getMessages();
+  const locale: AppLocale = rawLocale;
+  const messages = await getMessages();
 
-    return (
-        <NextIntlClientProvider messages={messages}>
-            {children}
-        </NextIntlClientProvider>
-    );
+  return (
+      <html lang={locale}>
+      <body className="bg-twitch-dark text-zinc-100 min-h-screen">
+      <NextIntlClientProvider locale={locale} messages={messages}>
+        {children}
+      </NextIntlClientProvider>
+      </body>
+      </html>
+  );
 }

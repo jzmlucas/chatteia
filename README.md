@@ -46,7 +46,7 @@ O projeto segue uma arquitetura simples orientada a **componentes client-side** 
                              ▼
 ┌──────────────────────────────────────────────────────────────────┐
 │                    Camada de Protocolo (Cliente)                 │
-│         (lib/twitchIrc.ts — parsing IRC, reconexão, eventos)      │
+│         (lib/irc.ts — parsing IRC, reconexão, eventos)      │
 └───────────────────────────┬────────────────────────────────────┘
                              │ wss://
                              ▼
@@ -57,7 +57,7 @@ O projeto segue uma arquitetura simples orientada a **componentes client-side** 
 
 ### Isolamento do Protocolo de Chat
 
-A camada de apresentação **nunca lida com o protocolo IRC bruto**. Todo o parsing (tags, PRIVMSG, PING/PONG, badges, cores) é resolvido em `lib/twitchIrc.ts`, que expõe apenas eventos de alto nível para a UI:
+A camada de apresentação **nunca lida com o protocolo IRC bruto**. Todo o parsing (tags, PRIVMSG, PING/PONG, badges, cores) é resolvido em `lib/platforms`, que expõe apenas eventos de alto nível para a UI:
 
 $$\text{Frame IRC bruto} \longrightarrow \text{parseIrcLine()} \longrightarrow \text{TwitchChatMessage} \longrightarrow \text{Componente React}$$
 
@@ -104,7 +104,7 @@ Isso permite substituir a fonte de dados (ex: trocar IRC por uma API própria, o
 
 ## TRATAMENTO DE ERROS E RECONEXÃO
 
-A camada de protocolo (`lib/twitchIrc.ts`) trata os seguintes cenários de falha, reportando o status para a UI via callback (`onStatus`):
+A camada de protocolo (`lib/platforms`) trata os seguintes cenários de falha, reportando o status para a UI via callback (`onStatus`):
 
 ```
 {
@@ -144,7 +144,7 @@ chatteia/
 │   └── page.tsx                 # Home com busca de canal
 │
 ├── lib/
-│   └── twitchIrc.ts             # Cliente WebSocket IRC (parsing, reconexão, eventos)
+│   └── irc.ts             # Cliente WebSocket IRC (parsing, reconexão, eventos)
 │
 ├── public/
 │   ├── icons8-twitch-cool-16.png

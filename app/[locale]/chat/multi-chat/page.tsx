@@ -1,15 +1,31 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
-import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import {
+  Link,
+  useRouter,
+} from "@/i18n/navigation";
+import {
+  useParams,
+  useSearchParams,
+} from "next/navigation";
+import {
+  useMemo,
+  useState,
+} from "react";
 
-import { useTwitchChannel } from "@/hooks/useTwitchChannel";
+import {
+  useTwitchMultiChat,
+} from "@/hooks/platforms/twitch/useTwitchMultiChat";
+
 import {
   ChatFeed,
   FeedMessage,
 } from "@/components/chat/ChatFeed";
+
+import {
+  CopyObsLinkButton,
+} from "@/components/chat/CopyObsLinkButton";
 
 const CHANNEL_COLORS = [
   "#9146FF",
@@ -20,124 +36,156 @@ const CHANNEL_COLORS = [
 
 export default function MultiChatPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams =
+    useSearchParams();
 
-  const t = useTranslations("chat");
-  const tm = useTranslations("multiChat");
+  const params = useParams<{
+    locale: string;
+  }>();
 
-  const initialChannels = useMemo(() => {
-    return (searchParams.get("channels") || "")
-      .split(",")
-      .map((channel) =>
-        channel.trim().replace(/^#/, "").toLowerCase()
+  const t =
+    useTranslations("chat");
+
+  const tm =
+    useTranslations("multiChat");
+
+  const to =
+    useTranslations("obs");
+
+  const initialChannels =
+    useMemo(() => {
+      return (
+        searchParams.get(
+          "channels"
+        ) || ""
       )
-      .filter((channel) =>
-        /^[a-zA-Z0-9_]{3,25}$/.test(channel)
-      )
-      .slice(0, 4);
-  }, [searchParams]);
+        .split(",")
+        .map((channel) =>
+          channel
+            .trim()
+            .replace(/^#/, "")
+            .toLowerCase()
+        )
+        .filter((channel) =>
+          /^[a-zA-Z0-9_]{3,25}$/.test(
+            channel
+          )
+        )
+        .slice(0, 4);
+    }, [searchParams]);
 
-  const [channels, setChannels] = useState<string[]>(
-    initialChannels
+  const [channels, setChannels] =
+    useState<string[]>(
+      initialChannels
+    );
+
+  const [filter, setFilter] =
+    useState("");
+
+  const [switchTo, setSwitchTo] =
+    useState("");
+
+  const [showAddChannel, setShowAddChannel] =
+    useState(false);
+
+  const [newChannel, setNewChannel] =
+    useState("");
+
+  const {
+    connections,
+  } = useTwitchMultiChat(
+    channels
   );
 
-  const [filter, setFilter] = useState("");
-  const [switchTo, setSwitchTo] = useState("");
+  const feedMessages =
+    useMemo<FeedMessage[]>(() => {
+      const allMessages: FeedMessage[] =
+        [];
 
-  const [showAddChannel, setShowAddChannel] = useState(false);
-  const [newChannel, setNewChannel] = useState("");
+      channels.forEach(
+        (channel, index) => {
+          const connection =
+            connections[channel];
 
-  const chat1 = useTwitchChannel(channels[0] || "");
-  const chat2 = useTwitchChannel(channels[1] || "");
-  const chat3 = useTwitchChannel(channels[2] || "");
-  const chat4 = useTwitchChannel(channels[3] || "");
+          if (!connection) {
+            return;
+          }
 
-  const chats = [
-    channels[0]
-      ? {
-          channel: channels[0],
-          ...chat1,
-          channelColor: CHANNEL_COLORS[0],
+          connection.messages.forEach(
+            (message) => {
+              const matchesFilter =
+                !filter ||
+                message.message
+                  .toLowerCase()
+                  .includes(
+                    filter.toLowerCase()
+                  ) ||
+                message.displayName
+                  .toLowerCase()
+                  .includes(
+                    filter.toLowerCase()
+                  );
+
+              if (!matchesFilter) {
+                return;
+              }
+
+              allMessages.push({
+                ...message,
+                channelLabel:
+                  channel,
+                channelColor:
+                  CHANNEL_COLORS[
+                    index %
+                      CHANNEL_COLORS.length
+                  ],
+              });
+            }
+          );
         }
-      : null,
+      );
 
-    channels[1]
-      ? {
-          channel: channels[1],
-          ...chat2,
-          channelColor: CHANNEL_COLORS[1],
-        }
-      : null,
+      return allMessages.sort(
+        (a, b) =>
+          a.timestamp -
+          b.timestamp
+      );
+    }, [
+      channels,
+      connections,
+      filter,
+    ]);
 
-    channels[2]
-      ? {
-          channel: channels[2],
-          ...chat3,
-          channelColor: CHANNEL_COLORS[2],
-        }
-      : null,
-
-    channels[3]
-      ? {
-          channel: channels[3],
-          ...chat4,
-          channelColor: CHANNEL_COLORS[3],
-        }
-      : null,
-  ].filter(Boolean);
-
-  const feedMessages = useMemo<FeedMessage[]>(() => {
-    const allMessages: FeedMessage[] = [];
-
-    chats.forEach((chat) => {
-      if (!chat) return;
-
-      chat.messages.forEach((message) => {
-        const matchesFilter =
-          !filter ||
-          message.message
-            .toLowerCase()
-            .includes(filter.toLowerCase()) ||
-          message.displayName
-            .toLowerCase()
-            .includes(filter.toLowerCase());
-
-        if (!matchesFilter) return;
-
-        allMessages.push({
-          ...message,
-          badgeMap: chat.badgeMap,
-          channelLabel: chat.channel,
-          channelColor: chat.channelColor,
-        });
-      });
-    });
-
-    return allMessages.sort(
-      (a, b) => a.timestamp - b.timestamp
-    );
-  }, [chats, filter]);
-
-  function updateUrl(nextChannels: string[]) {
-    if (nextChannels.length === 0) {
+  function updateUrl(
+    nextChannels: string[]
+  ) {
+    if (
+      nextChannels.length === 0
+    ) {
       router.push("/");
       return;
     }
 
     router.replace(
       `/chat/multi-chat?channels=${encodeURIComponent(
-      nextChannels.join(",")
+        nextChannels.join(",")
 )}`
     );
   }
 
-  function addChannel(channel: string) {
+  function addChannel(
+    channel: string
+  ) {
     const clean = channel
       .trim()
       .replace(/^#/, "")
       .toLowerCase();
 
-    if (!/^[a-zA-Z0-9_]{3,25}$/.test(clean)) {
+    if (
+      !/^[a-zA-Z0-9_]{3,25}$/.test(
+        clean
+      )
+    ) {
       return;
     }
 
@@ -150,7 +198,10 @@ export default function MultiChatPage() {
         return current;
       }
 
-      const next = [...current, clean];
+      const next = [
+        ...current,
+        clean,
+      ];
 
       updateUrl(next);
 
@@ -161,18 +212,27 @@ export default function MultiChatPage() {
     setShowAddChannel(false);
   }
 
-  function handleAddChannel(e: React.FormEvent) {
+  function handleAddChannel(
+    e: React.FormEvent
+  ) {
     e.preventDefault();
+
     addChannel(newChannel);
   }
 
-  function removeChannel(channel: string) {
-    const next = channels.filter(
-      (item) => item !== channel
-    );
+  function removeChannel(
+    channel: string
+  ) {
+    const next =
+      channels.filter(
+        (item) =>
+          item !== channel
+      );
 
     if (next.length === 1) {
-      router.push(`/chat/${next[0]}`);
+      router.push(
+        `/chat/${next[0]}`
+      );
       return;
     }
 
@@ -185,12 +245,14 @@ export default function MultiChatPage() {
 
     router.replace(
       `/chat/multi-chat?channels=${encodeURIComponent(
-      next.join(",")
+        next.join(",")
 )}`
     );
   }
 
-  function handleSwitch(e: React.FormEvent) {
+  function handleSwitch(
+    e: React.FormEvent
+  ) {
     e.preventDefault();
 
     const clean = switchTo
@@ -198,17 +260,33 @@ export default function MultiChatPage() {
       .replace(/^#/, "")
       .toLowerCase();
 
-    if (!/^[a-zA-Z0-9_]{3,25}$/.test(clean)) {
+    if (
+      !/^[a-zA-Z0-9_]{3,25}$/.test(
+        clean
+      )
+    ) {
       return;
     }
 
-    router.push(`/chat/${clean}`);
+    router.push(
+      `/chat/${clean}`
+    );
   }
 
-  const connectedCount = chats.filter(
-    (chat): chat is NonNullable<typeof chat> =>
-      chat !== null && chat.status === "connected"
-  ).length;
+  const connectedCount =
+    channels.filter(
+      (channel) =>
+        connections[channel]
+          ?.status === "connected"
+    ).length;
+
+  const obsUrl =
+    typeof window !==
+    "undefined"
+      ? `${window.location.origin}/${params.locale}/obs/multi-chat?channels=${encodeURIComponent(
+        channels.join(",")
+)}`
+      : "";
 
   return (
     <main className="h-dvh flex flex-col overflow-hidden">
@@ -216,7 +294,7 @@ export default function MultiChatPage() {
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href="/"
-            className="text-sm text-zinc-400 hover:text-white transition-colors"
+            className="shrink-0 text-sm text-zinc-400 transition-colors hover:text-white"
           >
             <img
               width="32"
@@ -226,127 +304,187 @@ export default function MultiChatPage() {
             />
           </Link>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {channels.map((channel, index) => (
-              <div
-                key={channel}
-                className="flex items-center gap-1"
-              >
-                <span
-                  className="text-lg font-semibold"
-                  style={{
-                    color:
-                      CHANNEL_COLORS[
-                        index % CHANNEL_COLORS.length
-                      ],
-                  }}
+          <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+            {channels.map(
+              (
+                channel,
+                index
+              ) => (
+                <div
+                  key={channel}
+                  className="flex shrink-0 items-center gap-1"
                 >
-                  #{channel}
-                </span>
+                  <span
+                    className="text-lg font-semibold"
+                    style={{
+                      color:
+                        CHANNEL_COLORS[
+                          index %
+                            CHANNEL_COLORS.length
+                        ],
+                    }}
+                  >
+                    #{channel}
+                  </span>
 
-                <button
-                  type="button"
-                  onClick={() => removeChannel(channel)}
-                  title={tm("removeChannelAria", {
-                    channel,
-                  })}
-                  aria-label={tm("removeChannelAria", {
-                    channel,
-                  })}
-                  className="h-5 w-5 flex items-center justify-center rounded text-zinc-500"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      removeChannel(
+                        channel
+                      )
+                    }
+                    title={tm(
+                      "removeChannelAria",
+                      {
+                        channel,
+                      }
+                    )}
+                    aria-label={tm(
+                      "removeChannelAria",
+                      {
+                        channel,
+                      }
+                    )}
+                    className="flex h-5 w-5 items-center justify-center rounded text-zinc-500 hover:text-white"
+                  >
+                    ×
+                  </button>
+                </div>
+              )
+            )}
           </div>
 
-          {channels.length < 4 && (
+          {channels.length <
+            4 && (
             <>
               <button
                 type="button"
                 onClick={() =>
                   setShowAddChannel(
-                    (current) => !current
+                    (current) =>
+                      !current
                   )
                 }
-                title={tm("addChannel")}
-                aria-label={tm("addChannel")}
-                className="h-7 w-7 flex items-center justify-center text-zinc-500"
+                title={tm(
+                  "addChannel"
+                )}
+                aria-label={tm(
+                  "addChannel"
+                )}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-lg text-zinc-500 hover:text-white"
               >
                 +
               </button>
 
               {showAddChannel && (
                 <form
-                  onSubmit={handleAddChannel}
-                  className="flex items-center gap-2"
+                  onSubmit={
+                    handleAddChannel
+                  }
+                  className="flex shrink-0 items-center gap-2"
                 >
                   <input
                     autoFocus
-                    value={newChannel}
-                    onChange={(e) =>
-                      setNewChannel(e.target.value)
+                    value={
+                      newChannel
                     }
-                    placeholder={tm("addChannelPlaceholder")}
-                    className="rounded-md bg-twitch-dark border border-twitch-border px-3 py-1.5 text-sm outline-none focus:border-twitch-purple w-36 sm:w-48"
+                    onChange={(e) =>
+                      setNewChannel(
+                        e.target.value
+                      )
+                    }
+                    placeholder={tm(
+                      "addChannelPlaceholder"
+                    )}
+                    className="w-36 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-twitch-purple sm:w-48"
                   />
 
                   <button
                     type="submit"
-                    className="rounded-md bg-twitch-purple px-3 py-1.5 text-sm font-medium hover:bg-purple-600 transition-colors"
+                    className="rounded-md bg-twitch-purple px-3 py-1.5 text-sm font-medium transition-colors hover:bg-purple-600"
                   >
-                    {tm("addChannelSubmit")}
+                    {tm(
+                      "addChannelSubmit"
+                    )}
                   </button>
                 </form>
               )}
             </>
           )}
 
-          <div className="flex items-center gap-2 text-xs text-zinc-400">
+          <div className="flex shrink-0 items-center gap-2 text-xs text-zinc-400">
             <span
               className={`h-2 w-2 rounded-full ${
-  connectedCount === channels.length &&
-  channels.length > 0
-      ? "bg-green-500"
-      : "bg-yellow-500"
+    connectedCount ===
+    channels.length &&
+    channels.length > 0
+        ? "bg-green-500"
+        : "bg-yellow-500"
 }`}
             />
 
-            {tm("connectedCount", {
-              connected: connectedCount,
-              total: channels.length,
-            })}
+            {tm(
+              "connectedCount",
+              {
+                connected:
+                  connectedCount,
+                total:
+                  channels.length,
+              }
+            )}
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <CopyObsLinkButton
+              url={obsUrl}
+              label={to(
+                "copyLink"
+              )}
+              copiedLabel={to(
+                "linkCopied"
+              )}
+            />
+
             <input
               value={filter}
               onChange={(e) =>
-                setFilter(e.target.value)
+                setFilter(
+                  e.target.value
+                )
               }
-              placeholder={t("searchPlaceholder")}
-              className="rounded-md bg-twitch-dark border border-twitch-border px-3 py-1.5 text-sm outline-none focus:border-twitch-purple w-40 sm:w-56"
+              placeholder={t(
+                "searchPlaceholder"
+              )}
+              className="w-40 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-twitch-purple sm:w-56"
             />
 
             <form
-              onSubmit={handleSwitch}
-              className="flex items-center gap-2"
+              onSubmit={
+                handleSwitch
+              }
+              className="flex shrink-0 items-center gap-2"
             >
               <input
                 value={switchTo}
                 onChange={(e) =>
-                  setSwitchTo(e.target.value)
+                  setSwitchTo(
+                    e.target.value
+                  )
                 }
-                placeholder={t("switchChannelPlaceholder")}
-                className="rounded-md bg-twitch-dark border border-twitch-border px-3 py-1.5 text-sm outline-none focus:border-twitch-purple w-36 sm:w-48"
+                placeholder={t(
+                  "switchChannelPlaceholder"
+                )}
+                className="w-36 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-twitch-purple sm:w-48"
               />
 
               <button
                 type="submit"
-                className="rounded-md bg-twitch-purple px-3 py-1.5 text-sm font-medium hover:bg-purple-600 transition-colors"
+                className="rounded-md bg-twitch-purple px-3 py-1.5 text-sm font-medium transition-colors hover:bg-purple-600"
               >
-                {t("switchChannelSubmit")}
+                {t(
+                  "switchChannelSubmit"
+                )}
               </button>
             </form>
           </div>
@@ -355,11 +493,13 @@ export default function MultiChatPage() {
 
       <ChatFeed
         messages={feedMessages}
-        showChannelTag={true}
+        showChannelTag
         emptyLabel={
           channels.length === 0
             ? tm("noChannels")
-            : tm("waitingMessages")
+            : tm(
+                "waitingMessages"
+              )
         }
       />
     </main>
