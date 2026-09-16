@@ -20,111 +20,47 @@ export function verifyKickSignature(
   signature: string
 ) {
   const payload = `${messageId}.${timestamp}.${body}`;
-
   const verifier = crypto.createVerify("RSA-SHA256");
-
   verifier.update(payload);
   verifier.end();
-
-  return verifier.verify(
-    KICK_PUBLIC_KEY,
-    signature,
-    "base64"
-  );
+  return verifier.verify(KICK_PUBLIC_KEY, signature, "base64");
 }
 
-export async function handleKickWebhook(
-  request: Request
-) {
+export async function handleKickWebhook(request: Request) {
   const body = await request.text();
   const headers = request.headers;
 
-  const messageId =
-    headers.get("Kick-Event-Message-Id");
+  const messageId = headers.get("Kick-Event-Message-Id");
+  const timestamp = headers.get("Kick-Event-Message-Timestamp");
+  const signature = headers.get("Kick-Event-Signature");
+  const eventType = headers.get("Kick-Event-Type");
 
-  const timestamp =
-    headers.get("Kick-Event-Message-Timestamp");
-
-  const signature =
-    headers.get("Kick-Event-Signature");
-
-  const eventType =
-    headers.get("Kick-Event-Type");
-
-  if (
-    !messageId ||
-    !timestamp ||
-    !signature
-  ) {
-    return new Response(
-      "Missing signature headers.",
-      { status: 401 }
-    );
+  if (!messageId || !timestamp || !signature) {
+    return new Response("Missing signature headers.", { status: 401 });
   }
 
-  if (
-    !verifyKickSignature(
-      body,
-      messageId,
-      timestamp,
-      signature
-    )
-  ) {
-    return new Response(
-      "Invalid signature.",
-      { status: 401 }
-    );
+  if (!verifyKickSignature(body, messageId, timestamp, signature)) {
+    return new Response("Invalid signature.", { status: 401 });
   }
 
-  if (
-    eventType !== "chat.message.sent"
-  ) {
-    return Response.json({
-      ok: true,
-      ignored: true,
-    });
+  if (eventType !== "chat.message.sent") {
+    return Response.json({ ok: true, ignored: true });
   }
 
   try {
-    const payload =
-      JSON.parse(body) as KickChatMessage;
-
-    // DEBUG TEMPORÁRIO:
-    // mostra exatamente como a KICK envia os emotes.
-    console.log(
-      "[KICK] PAYLOAD EMOTES:",
-      {
-        content: payload.content,
-        emotes: payload.emotes,
-      }
-    );
-
-    const message =
-      normalizeKickMessage(payload);
-
+    const payload = JSON.parse(body) as KickChatMessage;
+    const message = normalizeKickMessage(payload);
     publishKickChat(message);
 
-    console.log(
-      "[KICK] Chat message:",
-      {
-        channel: message.channel,
-        username: message.username,
-        id: message.id,
-      }
-    );
-
-    return Response.json({
-      ok: true,
+    console.log("[KICK] Chat message:", {
+      channel: message.channel,
+      username: message.username,
+      id: message.id,
     });
-  } catch (error) {
-    console.error(
-      "[KICK] Webhook:",
-      error
-    );
 
-    return new Response(
-      "Invalid payload.",
-      { status: 400 }
-    );
+    return Response.json({ ok: true });
+  } catch (error) {
+    console.error("[KICK] Webhook:", error);
+    return new Response("Invalid payload.", { status: 400 });
   }
 }
