@@ -12,29 +12,29 @@
 "label": "Язык",
 "srLabel": "Изменить язык"
 },
-  "home": {
-    "title": "Chatteia",
-    "subtitle": "Читайте чаты с платформ одновременно.",
-    "channelLabel": "Канал",
-    "channelPlaceholder": "например: turbao8 или twitch.tv/turbao8",
-    "twitchChannelPlaceholder": "например: turbao8 или twitch.tv/turbao8",
-    "kickChannelPlaceholder": "например: turbao8 или kick.com/turbao8",
-    "secondChannelPlaceholder": "например: turbao8",
-    "singleChat": "Один чат",
-    "multiChat": "Мульти-чат",
-    "submit": "Открыть чат",
-    "multiChatSubmit": "Открыть мульти-чат",
-    "kickStreamerAuthorize": "Я стример KICK",
-    "footer": "Вход не требуется, если вы просто хотите читать чат.",
-    "errorInvalidChannel": "Введите корректное имя канала или ссылку.",
-    "errorSecondChannel": "Введите также второй канал.",
-    "errorSameChannels": "Выберите два разных канала."
-  },
+"home": {
+"title": "Chatteia",
+"subtitle": "Читайте чаты нескольких платформ одновременно.",
+"channelLabel": "Канал",
+"channelPlaceholder": "например: turbao8 или twitch.tv/turbao8",
+"twitchChannelPlaceholder": "например: turbao8 или twitch.tv/turbao8",
+"kickChannelPlaceholder": "например: turbao8 или kick.com/turbao8",
+"secondChannelPlaceholder": "например: turbao8",
+"singleChat": "Один чат",
+"multiChat": "Мульти-чат",
+"submit": "Открыть чат",
+"multiChatSubmit": "Открыть мульти-чат",
+"kickStreamerAuthorize": "Я стример KICK",
+"footer": "Вход не требуется, если вы хотите только читать чат.",
+"errorInvalidChannel": "Введите название канала или действительную ссылку.",
+"errorSecondChannel": "Введите также второй канал.",
+"errorSameChannels": "Выберите два разных канала."
+},
 "chatStatus": {
 "idle": "Запуск…",
 "connecting": "Подключение…",
 "connected": "Подключено",
-"reconnecting": "Переподключение…",
+"reconnecting": "Повторное подключение…",
 "error": "Ошибка подключения",
 "closed": "Отключено"
 },
@@ -48,18 +48,20 @@
 "switchChannelPlaceholder": "Перейти к каналу…",
 "switchChannelSubmit": "Перейти",
 "viewersLive": "{count} зрителей в эфире",
-"waitingMessages": "Ожидание сообщений чата…",
+"waitingMessages": "Ожидание сообщений из чата…",
 "connectingToChat": "Подключение к чату…",
 "newMessagesButton": "↓ Новые сообщения"
 },
 "multiChat": {
 "addChannel": "Добавить канал",
-"addChannelPlaceholder": "добавить канал...",
-"addChannelSubmit": "Добавить канал",
+"platform": "Платформа",
+"addChannelPlaceholder": "Добавить канал…",
+"addChannelSubmit": "Добавить",
 "removeChannelAria": "Удалить #{channel}",
 "connectedCount": "{connected}/{total} подключено",
+"searchPlaceholder": "Поиск сообщений…",
 "noChannels": "Каналы не добавлены.",
-"waitingMessages": "Ожидание сообщений чатов…"
+"waitingMessages": "Ожидание сообщений из чатов…"
 },
 "obs": {
 "copyLink": "+ OBS",
@@ -67,18 +69,18 @@
 },
 "kick": {
 "authorizationRequired": "Этот стример ещё не авторизовал Chatteia.",
-"authorizationDescription": "Чат KICK не может отображаться, пока стример не разрешит доступ."
+"authorizationDescription": "Чат KICK нельзя отображать, пока стример не разрешит доступ."
 },
-  "kickConnect": {
-    "back": "Назад",
-    "title": "Подключить канал KICK",
-    "description": "Владелец канала один раз авторизует Chatteia. После этого посетителям не нужно входить в систему, чтобы читать чат.",
-    "authorize": "Авторизовать мой канал KICK",
-    "success": {
-      "channelAuthorized": "Канал авторизован: #{channel}",
-      "subscriptionError": "Авторизация сохранена, но подписку на чат не удалось создать: {error}",
-      "subscriptionCreated": "Теперь посетители могут открыть канал без входа в систему.",
-      "testAt": "Проверить:"
-    }
-  }
+"kickConnect": {
+"back": "Назад",
+"title": "Подключить свой канал KICK",
+"description": "Владелец канала один раз авторизует Chatteia. После этого посетителям не нужно входить в систему, чтобы читать чат.",
+"authorize": "Авторизовать мой канал",
+"success": {
+"channelAuthorized": "Канал авторизован: #{channel}",
+"subscriptionError": "Авторизация сохранена, но подписку на чат не удалось создать: {error}",
+"subscriptionCreated": "Теперь посетители могут открыть канал без входа в систему.",
+"testAt": "Проверить по адресу:"
+}
+}
 }
