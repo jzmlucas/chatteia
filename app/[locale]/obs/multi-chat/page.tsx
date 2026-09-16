@@ -1,20 +1,9 @@
 "use client";
 
-import {
-    useCallback,
-    useMemo,
-    useState,
-} from "react";
-
-import { useSearchParams } from "next/navigation";
-import { useObsTransparentBackground } from "@/hooks/chat/useObsTransparentBackground";
-
-import type {
-    UnifiedChatMessage,
-} from "@/lib/chat/types";
+import { useParams } from "next/navigation";
 
 import {
-    TwitchMultiChatConnections,
+    useTwitchMultiChat,
 } from "@/hooks/platforms/twitch/useTwitchMultiChat";
 
 import {
@@ -22,75 +11,37 @@ import {
 } from "@/components/chat/ChatFeed";
 
 export default function ObsMultiChatPage() {
-    useObsTransparentBackground();
-    const searchParams = useSearchParams();
+    const params = useParams<{
+        locale: string;
+    }>();
 
-    const channels = useMemo(
-        () =>
-            (
-                searchParams.get("channels") ?? ""
+    const searchParams =
+        new URLSearchParams(
+            typeof window !== "undefined"
+                ? window.location.search
+                : ""
+        );
+
+    const channels =
+        searchParams
+            .get("channels")
+            ?.split(",")
+            .map((channel) =>
+                channel.trim()
             )
-                .split(",")
-                .map((channel) =>
-                    channel.trim().toLowerCase()
-                )
-                .filter(Boolean),
-        [searchParams]
-    );
+            .filter(Boolean) ?? [];
 
-    const [
-        channelMessages,
-        setChannelMessages,
-    ] = useState<
-        Record<
-            string,
-            UnifiedChatMessage[]
-        >
-    >({});
-
-    const handleMessages = useCallback(
-        (
-            channel: string,
-            messages: UnifiedChatMessage[]
-        ) => {
-            setChannelMessages((current) => ({
-                ...current,
-                [channel]: messages,
-            }));
-        },
-        []
-    );
-
-    const messages = useMemo(
-        () =>
-            channels
-                .flatMap((channel) =>
-                    (
-                        channelMessages[channel] ?? []
-                    ).map((message) => ({
-                        ...message,
-                        channelLabel: channel,
-                    }))
-                )
-                .sort(
-                    (a, b) =>
-                        a.timestamp - b.timestamp
-                ),
-        [channels, channelMessages]
+    const {
+        messages,
+    } = useTwitchMultiChat(
+        channels
     );
 
     return (
         <main className="h-screen w-screen overflow-hidden bg-transparent">
-            <div className="hidden">
-                <TwitchMultiChatConnections
-                    channels={channels}
-                    onMessages={handleMessages}
-                />
-            </div>
-
             <ChatFeed
                 messages={messages}
-                showChannelTag
+                showChannelTag={true}
                 variant="obs"
                 emptyLabel=""
             />
