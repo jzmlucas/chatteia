@@ -8,7 +8,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq/+l1WnlRrGSolDMA+A8
 6rAhMbQGmQ2SapVcGM3zq8ANXjnhDWocMqfWcTd95btDydITa10kDvHzw9WQOqp2
 MZI7ZyrfzJuz5nhTPCiJwTwnEtWft7nV14BYRDHvlfqPUaZ+1KR4OCaO/wWIk/rQ
 L/TjY0M70gse8rlBkbo2a8rKhu69RQTRsoaf4DVhDPEeSeI5jVrRDGAMGL3cGuyY
-6CLKGdjVEM78g3fYOvDU/RvfqD7L89TZ3iN94jrmWdGz34JNlEI5hqK8dd7C5EF
+6CLKGdjVEM78g3JfYOvDU/RvfqD7L89TZ3iN94jrmWdGz34JNlEI5hqK8dd7C5EF
 BEbZ5jgB8s8ReQV8H+MkuffjdAj3ajDDX3DOJMIut1lBrUVD1AaSrGCKHooWoL2e
 twIDAQAB
 -----END PUBLIC KEY-----`;
@@ -39,21 +39,17 @@ export async function handleKickWebhook(
   const body = await request.text();
   const headers = request.headers;
 
-  const messageId = headers.get(
-    "Kick-Event-Message-Id"
-  );
+  const messageId =
+    headers.get("Kick-Event-Message-Id");
 
-  const timestamp = headers.get(
-    "Kick-Event-Message-Timestamp"
-  );
+  const timestamp =
+    headers.get("Kick-Event-Message-Timestamp");
 
-  const signature = headers.get(
-    "Kick-Event-Signature"
-  );
+  const signature =
+    headers.get("Kick-Event-Signature");
 
-  const eventType = headers.get(
-    "Kick-Event-Type"
-  );
+  const eventType =
+    headers.get("Kick-Event-Type");
 
   if (
     !messageId ||
@@ -93,22 +89,13 @@ export async function handleKickWebhook(
     const payload =
       JSON.parse(body) as KickChatMessage;
 
+    // DEBUG TEMPORÁRIO:
+    // mostra exatamente como a KICK envia os emotes.
     console.log(
       "[KICK] PAYLOAD EMOTES:",
       {
-        channel:
-          payload.broadcaster
-            ?.channel_slug,
-
-        username:
-          payload.sender
-            ?.username,
-
-        content:
-          payload.content,
-
-        emotes:
-          payload.emotes,
+        content: payload.content,
+        emotes: payload.emotes,
       }
     );
 
@@ -120,14 +107,9 @@ export async function handleKickWebhook(
     console.log(
       "[KICK] Chat message:",
       {
-        channel:
-          message.channel,
-
-        username:
-          message.username,
-
-        id:
-          message.id,
+        channel: message.channel,
+        username: message.username,
+        id: message.id,
       }
     );
 
