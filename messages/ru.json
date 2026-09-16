@@ -1,59 +1,84 @@
 {
-  "meta": {
-    "title": "Chatteia",
-    "description": "Следите за чатом любого канала Twitch в реальном времени."
-  },
-  "settings": {
-    "title": "Настройки",
-    "language": "Язык",
-    "open": "Открыть настройки"
-  },
-  "languageSwitcher": {
-    "label": "Язык",
-    "srLabel": "Изменить язык"
-  },
+"meta": {
+"title": "Chatteia",
+"description": "Следите за чатом любого канала Twitch в реальном времени."
+},
+"settings": {
+"title": "Настройки",
+"language": "Язык",
+"open": "Открыть настройки"
+},
+"languageSwitcher": {
+"label": "Язык",
+"srLabel": "Изменить язык"
+},
   "home": {
     "title": "Chatteia",
-    "subtitle": "Введите имя канала Twitch, чтобы следить за чатом.",
-    "channelLabel": "Канал Twitch",
-    "channelPlaceholder": "например: turbao8 или www.twitch.tv/turbao8",
+    "subtitle": "Читайте чаты с платформ одновременно.",
+    "channelLabel": "Канал",
+    "channelPlaceholder": "например: turbao8 или twitch.tv/turbao8",
+    "twitchChannelPlaceholder": "например: turbao8 или twitch.tv/turbao8",
+    "kickChannelPlaceholder": "например: turbao8 или kick.com/turbao8",
+    "secondChannelPlaceholder": "например: turbao8",
+    "singleChat": "Один чат",
+    "multiChat": "Мульти-чат",
     "submit": "Открыть чат",
-    "footer": "Без входа. Без регистрации. Только если вы сами захотите!",
-    "errorInvalidChannel": "Введите корректное имя канала или ссылку Twitch."
+    "multiChatSubmit": "Открыть мульти-чат",
+    "kickStreamerAuthorize": "Я стример KICK",
+    "footer": "Вход не требуется, если вы просто хотите читать чат.",
+    "errorInvalidChannel": "Введите корректное имя канала или ссылку.",
+    "errorSecondChannel": "Введите также второй канал.",
+    "errorSameChannels": "Выберите два разных канала."
   },
-  "chatStatus": {
-    "idle": "Запуск…",
-    "connecting": "Подключение…",
-    "connected": "Подключено",
-    "reconnecting": "Переподключение…",
-    "error": "Ошибка подключения",
-    "closed": "Отключено"
-  },
-  "chat": {
-    "backToHome": "Главная",
-    "addChannel": "Добавить канал в мульти-чат",
-    "addChannelPlaceholder": "Добавить канал…",
-    "addChannelSubmit": "Добавить",
-    "removeChannel": "Удалить канал",
-    "searchPlaceholder": "Поиск сообщений…",
-    "switchChannelPlaceholder": "Перейти к каналу…",
-    "switchChannelSubmit": "Перейти",
-    "viewersLive": "{count} зрителей в эфире",
-    "waitingMessages": "Ожидание сообщений чата…",
-    "connectingToChat": "Подключение к чату…",
-    "newMessagesButton": "↓ Новые сообщения"
-  },
-  "multiChat": {
-    "addChannel": "Добавить канал",
-    "addChannelPlaceholder": "добавить канал...",
-    "addChannelSubmit": "Добавить канал",
-    "removeChannelAria": "Удалить #{channel}",
-    "connectedCount": "{connected}/{total} подключено",
-    "noChannels": "Каналы не добавлены.",
-    "waitingMessages": "Ожидание сообщений чатов…"
-  },
-  "obs": {
-    "copyLink": "+ OBS",
-    "linkCopied": "Ссылка скопирована!"
+"chatStatus": {
+"idle": "Запуск…",
+"connecting": "Подключение…",
+"connected": "Подключено",
+"reconnecting": "Переподключение…",
+"error": "Ошибка подключения",
+"closed": "Отключено"
+},
+"chat": {
+"backToHome": "Главная",
+"addChannel": "Добавить канал в мульти-чат",
+"addChannelPlaceholder": "Добавить канал…",
+"addChannelSubmit": "Добавить",
+"removeChannel": "Удалить канал",
+"searchPlaceholder": "Поиск сообщений…",
+"switchChannelPlaceholder": "Перейти к каналу…",
+"switchChannelSubmit": "Перейти",
+"viewersLive": "{count} зрителей в эфире",
+"waitingMessages": "Ожидание сообщений чата…",
+"connectingToChat": "Подключение к чату…",
+"newMessagesButton": "↓ Новые сообщения"
+},
+"multiChat": {
+"addChannel": "Добавить канал",
+"addChannelPlaceholder": "добавить канал...",
+"addChannelSubmit": "Добавить канал",
+"removeChannelAria": "Удалить #{channel}",
+"connectedCount": "{connected}/{total} подключено",
+"noChannels": "Каналы не добавлены.",
+"waitingMessages": "Ожидание сообщений чатов…"
+},
+"obs": {
+"copyLink": "+ OBS",
+"linkCopied": "Ссылка скопирована!"
+},
+"kick": {
+"authorizationRequired": "Этот стример ещё не авторизовал Chatteia.",
+"authorizationDescription": "Чат KICK не может отображаться, пока стример не разрешит доступ."
+},
+  "kickConnect": {
+    "back": "Назад",
+    "title": "Подключить канал KICK",
+    "description": "Владелец канала один раз авторизует Chatteia. После этого посетителям не нужно входить в систему, чтобы читать чат.",
+    "authorize": "Авторизовать мой канал KICK",
+    "success": {
+      "channelAuthorized": "Канал авторизован: #{channel}",
+      "subscriptionError": "Авторизация сохранена, но подписку на чат не удалось создать: {error}",
+      "subscriptionCreated": "Теперь посетители могут открыть канал без входа в систему.",
+      "testAt": "Проверить:"
+    }
   }
 }

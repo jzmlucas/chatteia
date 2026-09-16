@@ -1,59 +1,85 @@
 {
-  "meta": {
-    "title": "Chatteia",
-    "description": "Acompanhe o chat de qualquer canal da Twitch em tempo real."
-  },
-  "settings": {
-    "title": "Configurações",
-    "language": "Idioma",
-    "open": "Abrir configurações"
-  },
-  "languageSwitcher": {
-    "label": "Idioma",
-    "srLabel": "Alterar idioma"
-  },
+"meta": {
+"title": "Chatteia",
+"description": "Acompanhe o chat de qualquer canal da Twitch em tempo real."
+},
+"settings": {
+"title": "Configurações",
+"language": "Idioma",
+"open": "Abrir configurações"
+},
+"languageSwitcher": {
+"label": "Idioma",
+"srLabel": "Alterar idioma"
+},
   "home": {
     "title": "Chatteia",
-    "subtitle": "Digite o nome de um canal da Twitch para acompanhar o chat.",
-    "channelLabel": "Canal da Twitch",
-    "channelPlaceholder": "ex: turbao8 ou www.twitch.tv/turbao8",
+    "subtitle": "Leia os chats das plataformas de forma simultânea.",
+    "channelLabel": "Canal",
+    "channelPlaceholder": "ex: turbao8 ou twitch.tv/turbao8",
+    "twitchChannelPlaceholder": "ex: turbao8 ou twitch.tv/turbao8",
+    "kickChannelPlaceholder": "ex: turbao8 ou kick.com/turbao8",
+    "secondChannelPlaceholder": "ex: turbao8",
+    "singleChat": "Um chat",
+    "multiChat": "Multi-chat",
     "submit": "Abrir chat",
-    "footer": "Sem login. Sem cadastro. Só se você quiser!",
-    "errorInvalidChannel": "Digite um nome de canal ou um link válido da Twitch."
+    "multiChatSubmit": "Abrir multi-chat",
+    "kickStreamerAuthorize": "Sou streamer KICK",
+    "footer": "Sem login para quem só quer ler o chat.",
+    "errorInvalidChannel": "Digite um nome de canal ou um link válido.",
+    "errorSecondChannel": "Digite também o segundo canal.",
+    "errorSameChannels": "Escolha dois canais diferentes."
   },
-  "chatStatus": {
-    "idle": "Iniciando…",
-    "connecting": "Conectando…",
-    "connected": "Conectado",
-    "reconnecting": "Reconectando…",
-    "error": "Erro de conexão",
-    "closed": "Desconectado"
-  },
-  "chat": {
-    "backToHome": "Início",
-    "addChannel": "Adicionar canal ao multi-chat",
-    "addChannelPlaceholder": "Adicionar canal…",
-    "addChannelSubmit": "Adicionar",
-    "removeChannel": "Remover canal",
-    "searchPlaceholder": "Buscar mensagens…",
-    "switchChannelPlaceholder": "Ir para o canal…",
-    "switchChannelSubmit": "Ir",
-    "viewersLive": "{count} espectadores ao vivo",
-    "waitingMessages": "Aguardando mensagens do chat…",
-    "connectingToChat": "Conectando ao chat…",
-    "newMessagesButton": "↓ Novas mensagens"
-  },
-  "multiChat": {
-    "addChannel": "Adicionar canal",
-    "addChannelPlaceholder": "adicionar canal...",
-    "addChannelSubmit": "Adicionar canal",
-    "removeChannelAria": "Remover #{channel}",
-    "connectedCount": "{connected}/{total} conectados",
-    "noChannels": "Nenhum canal adicionado.",
-    "waitingMessages": "Aguardando mensagens dos chats…"
-  },
-  "obs": {
-    "copyLink": "+ OBS",
-    "linkCopied": "Link copiado!"
+
+"chatStatus": {
+"idle": "Iniciando…",
+"connecting": "Conectando…",
+"connected": "Conectado",
+"reconnecting": "Reconectando…",
+"error": "Erro de conexão",
+"closed": "Desconectado"
+},
+"chat": {
+"backToHome": "Início",
+"addChannel": "Adicionar canal ao multi-chat",
+"addChannelPlaceholder": "Adicionar canal…",
+"addChannelSubmit": "Adicionar",
+"removeChannel": "Remover canal",
+"searchPlaceholder": "Buscar mensagens…",
+"switchChannelPlaceholder": "Ir para o canal…",
+"switchChannelSubmit": "Ir",
+"viewersLive": "{count} espectadores ao vivo",
+"waitingMessages": "Aguardando mensagens do chat…",
+"connectingToChat": "Conectando ao chat…",
+"newMessagesButton": "↓ Novas mensagens"
+},
+"multiChat": {
+"addChannel": "Adicionar canal",
+"addChannelPlaceholder": "adicionar canal...",
+"addChannelSubmit": "Adicionar canal",
+"removeChannelAria": "Remover #{channel}",
+"connectedCount": "{connected}/{total} conectados",
+"noChannels": "Nenhum canal adicionado.",
+"waitingMessages": "Aguardando mensagens dos chats…"
+},
+"obs": {
+"copyLink": "+ OBS",
+"linkCopied": "Link copiado!"
+},
+"kick": {
+"authorizationRequired": "Este streamer ainda não autorizou o Chatteia.",
+"authorizationDescription": "O chat da KICK não pode ser exibido até que o streamer autorize o acesso."
+},
+  "kickConnect": {
+    "back": "Voltar",
+    "title": "Conectar seu canal KICK",
+    "description": "O dono do canal autoriza o Chatteia uma vez. Depois disso, visitantes não precisam fazer login para ler o chat.",
+    "authorize": "Autorizar meu canal KICK",
+    "success": {
+      "channelAuthorized": "Canal autorizado: #{channel}",
+      "subscriptionError": "A autorização foi salva, mas a assinatura do chat não foi criada: {error}",
+      "subscriptionCreated": "Agora visitantes podem abrir o canal sem login.",
+      "testAt": "Teste em:"
+    }
   }
 }

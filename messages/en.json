@@ -1,59 +1,84 @@
 {
-  "meta": {
-    "title": "Chatteia",
-    "description": "Follow the chat of any Twitch channel in real time."
-  },
-  "settings": {
-    "title": "Settings",
-    "language": "Language",
-    "open": "Open settings"
-  },
-  "languageSwitcher": {
-    "label": "Language",
-    "srLabel": "Change language"
-  },
+"meta": {
+"title": "Chatteia",
+"description": "Follow the chat of any Twitch channel in real time."
+},
+"settings": {
+"title": "Settings",
+"language": "Language",
+"open": "Open settings"
+},
+"languageSwitcher": {
+"label": "Language",
+"srLabel": "Change language"
+},
   "home": {
     "title": "Chatteia",
-    "subtitle": "Enter a Twitch channel name to follow the chat.",
-    "channelLabel": "Twitch channel",
-    "channelPlaceholder": "e.g. turbao8 or www.twitch.tv/turbao8",
+    "subtitle": "Read chats from platforms simultaneously.",
+    "channelLabel": "Channel",
+    "channelPlaceholder": "e.g. turbao8 or twitch.tv/turbao8",
+    "twitchChannelPlaceholder": "e.g. turbao8 or twitch.tv/turbao8",
+    "kickChannelPlaceholder": "e.g. turbao8 or kick.com/turbao8",
+    "secondChannelPlaceholder": "e.g. turbao8",
+    "singleChat": "Single chat",
+    "multiChat": "Multi-chat",
     "submit": "Open chat",
-    "footer": "No login. No sign-up. Only if you want to!",
-    "errorInvalidChannel": "Enter a valid Twitch channel name or link."
+    "multiChatSubmit": "Open multi-chat",
+    "kickStreamerAuthorize": "I'm a KICK streamer",
+    "footer": "No login required if you only want to read the chat.",
+    "errorInvalidChannel": "Enter a valid channel name or link.",
+    "errorSecondChannel": "Enter the second channel as well.",
+    "errorSameChannels": "Choose two different channels."
   },
-  "chatStatus": {
-    "idle": "Starting…",
-    "connecting": "Connecting…",
-    "connected": "Connected",
-    "reconnecting": "Reconnecting…",
-    "error": "Connection error",
-    "closed": "Disconnected"
-  },
-  "chat": {
-    "backToHome": "Home",
-    "addChannel": "Add channel to multi-chat",
-    "addChannelPlaceholder": "Add channel…",
-    "addChannelSubmit": "Add",
-    "removeChannel": "Remove channel",
-    "searchPlaceholder": "Search messages…",
-    "switchChannelPlaceholder": "Go to channel…",
-    "switchChannelSubmit": "Go",
-    "viewersLive": "{count} viewers watching",
-    "waitingMessages": "Waiting for chat messages…",
-    "connectingToChat": "Connecting to chat…",
-    "newMessagesButton": "↓ New messages"
-  },
-  "multiChat": {
-    "addChannel": "Add channel",
-    "addChannelPlaceholder": "add channel...",
-    "addChannelSubmit": "Add channel",
-    "removeChannelAria": "Remove #{channel}",
-    "connectedCount": "{connected}/{total} connected",
-    "noChannels": "No channels added.",
-    "waitingMessages": "Waiting for chat messages…"
-  },
-  "obs": {
-    "copyLink": "+ OBS",
-    "linkCopied": "Link copied!"
+"chatStatus": {
+"idle": "Starting…",
+"connecting": "Connecting…",
+"connected": "Connected",
+"reconnecting": "Reconnecting…",
+"error": "Connection error",
+"closed": "Disconnected"
+},
+"chat": {
+"backToHome": "Home",
+"addChannel": "Add channel to multi-chat",
+"addChannelPlaceholder": "Add channel…",
+"addChannelSubmit": "Add",
+"removeChannel": "Remove channel",
+"searchPlaceholder": "Search messages…",
+"switchChannelPlaceholder": "Go to channel…",
+"switchChannelSubmit": "Go",
+"viewersLive": "{count} viewers watching",
+"waitingMessages": "Waiting for chat messages…",
+"connectingToChat": "Connecting to chat…",
+"newMessagesButton": "↓ New messages"
+},
+"multiChat": {
+"addChannel": "Add channel",
+"addChannelPlaceholder": "add channel...",
+"addChannelSubmit": "Add channel",
+"removeChannelAria": "Remove #{channel}",
+"connectedCount": "{connected}/{total} connected",
+"noChannels": "No channels added.",
+"waitingMessages": "Waiting for chat messages…"
+},
+"obs": {
+"copyLink": "+ OBS",
+"linkCopied": "Link copied!"
+},
+"kick": {
+"authorizationRequired": "This streamer has not authorized Chatteia yet.",
+"authorizationDescription": "The KICK chat cannot be displayed until the streamer authorizes access."
+},
+  "kickConnect": {
+    "back": "Back",
+    "title": "Connect your KICK channel",
+    "description": "The channel owner authorizes Chatteia once. After that, visitors do not need to log in to read the chat.",
+    "authorize": "Authorize my KICK channel",
+    "success": {
+      "channelAuthorized": "Channel authorized: #{channel}",
+      "subscriptionError": "Authorization was saved, but the chat subscription could not be created: {error}",
+      "subscriptionCreated": "Visitors can now open the channel without logging in.",
+      "testAt": "Test at:"
+    }
   }
 }
