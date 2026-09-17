@@ -19,10 +19,10 @@ export type FeedMessage =
 };
 
 export function ChatMessage({
-    message,
-    showChannelTag,
-    obsSettings,
-}: {
+                                message,
+                                showChannelTag,
+                                obsSettings,
+                            }: {
     message: FeedMessage;
     showChannelTag: boolean;
     obsSettings?: ObsChatSettings;
@@ -43,16 +43,17 @@ export function ChatMessage({
         isObs &&
         obsSettings.messageBackground
             ? hexToRgba(
-                  obsSettings.messageBackgroundColor,
-                  obsSettings.messageBackgroundOpacity
-              )
+                obsSettings.messageBackgroundColor,
+                obsSettings.messageBackgroundOpacity
+            )
             : undefined;
 
     const animationClass =
         isObs
             ? getAnimationClass(
-                  obsSettings.animation
-              )
+                obsSettings.animationDirection,
+                obsSettings.animationSpeed
+            )
             : "";
 
     return (
@@ -71,31 +72,31 @@ export function ChatMessage({
             style={
                 isObs
                     ? {
-                          fontFamily:
-                              obsSettings.fontFamily,
+                        fontFamily:
+                        obsSettings.fontFamily,
 
-                          fontSize:
-                              `${obsSettings.fontSize}px`,
+                        fontSize:
+                            `${obsSettings.fontSize}px`,
 
-                          fontWeight:
-                              obsSettings.fontWeight,
+                        fontWeight:
+                        obsSettings.fontWeight,
 
-                          gap: "0.25rem",
+                        gap: "0.25rem",
 
-                          padding:
-                              obsSettings.messageBackground
-                                  ? "8px 12px"
-                                  : "0",
+                        padding:
+                            obsSettings.messageBackground
+                                ? "8px 12px"
+                                : "0",
 
-                          borderRadius:
-                              `${obsSettings.borderRadius}px`,
+                        borderRadius:
+                            `${obsSettings.borderRadius}px`,
 
-                          backgroundColor:
-                              backgroundColor,
+                        backgroundColor:
+                        backgroundColor,
 
-                          marginBottom:
-                              "0",
-                      }
+                        marginBottom:
+                            "0",
+                    }
                     : undefined
             }
         >
@@ -153,7 +154,7 @@ export function ChatMessage({
                                         badge.description
                                             ? `${badge.name ?? ""} — ${badge.description}`
                                             : badge.name ??
-                                              ""
+                                            ""
                                     }
                                     loading="lazy"
                                     className="
@@ -170,7 +171,7 @@ export function ChatMessage({
 
             {!isObs &&
                 message.badges.length >
-                    0 && (
+                0 && (
                     <span
                         className="
                             inline-flex
@@ -197,7 +198,7 @@ export function ChatMessage({
                                         badge.description
                                             ? `${badge.name ?? ""} — ${badge.description}`
                                             : badge.name ??
-                                              ""
+                                            ""
                                     }
                                     loading="lazy"
                                     className="
@@ -219,7 +220,7 @@ export function ChatMessage({
                         className="font-semibold"
                         style={{
                             color:
-                                usernameColor,
+                            usernameColor,
                         }}
                     >
                         {
@@ -231,9 +232,9 @@ export function ChatMessage({
                         style={
                             isObs
                                 ? {
-                                      color:
-                                          messageColor,
-                                  }
+                                    color:
+                                    messageColor,
+                                }
                                 : undefined
                         }
                         className={
@@ -257,9 +258,9 @@ export function ChatMessage({
                 style={
                     isObs
                         ? {
-                              color:
-                                  messageColor,
-                          }
+                            color:
+                            messageColor,
+                        }
                         : undefined
                 }
             >
@@ -285,8 +286,8 @@ function hexToRgba(
         )
     ) {
         return `rgba(0, 0, 0, ${
-    opacity / 100
-})`;
+            opacity / 100
+        })`;
     }
 
     const red = parseInt(
@@ -305,28 +306,22 @@ function hexToRgba(
     );
 
     return `rgba(${red}, ${green}, ${blue}, ${
-    Math.max(
-        0,
-        Math.min(100, opacity)
-    ) / 100
-})`;
+        Math.max(
+            0,
+            Math.min(100, opacity)
+        ) / 100
+    })`;
 }
 
 function getAnimationClass(
-    animation: ObsChatSettings["animation"]
+    direction: ObsChatSettings["animationDirection"],
+    speed: ObsChatSettings["animationSpeed"]
 ): string {
-    switch (animation) {
-        case "fade":
-            return "obs-chat-animation-fade";
+    const directionClass =
+        `obs-chat-animation-${direction}`;
 
-        case "slide-left":
-            return "obs-chat-animation-slide-left";
+    const speedClass =
+        `obs-chat-animation-speed-${speed}`;
 
-        case "slide-up":
-            return "obs-chat-animation-slide-up";
-
-        case "none":
-        default:
-            return "";
-    }
+    return `${directionClass} ${speedClass}`;
 }
