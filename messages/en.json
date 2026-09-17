@@ -1,60 +1,62 @@
 {
-"meta": {
-"title": "Chatteia",
-"description": "Follow the chat of any Twitch channel in real time."
-},
-"settings": {
-"title": "Settings",
-"language": "Language",
-"open": "Open settings"
-},
-"languageSwitcher": {
-"label": "Language",
-"srLabel": "Change language"
-},
-"home": {
-"title": "Chatteia",
-"subtitle": "Read chats from multiple platforms simultaneously.",
-"channelLabel": "Channel",
-"channelPlaceholder": "e.g. turbao8 or twitch.tv/turbao8",
-"twitchChannelPlaceholder": "e.g. turbao8 or twitch.tv/turbao8",
-"kickChannelPlaceholder": "e.g. turbao8 or kick.com/turbao8",
-"secondChannelPlaceholder": "e.g. turbao8",
-"singleChat": "Single chat",
-"multiChat": "Multi-chat",
-"submit": "Open chat",
-"multiChatSubmit": "Open multi-chat",
-"kickStreamerAuthorize": "I'm a KICK streamer",
-"footer": "No login required for those who just want to read the chat.",
-"errorInvalidChannel": "Enter a channel name or a valid link.",
-"errorSecondChannel": "Enter the second channel as well.",
-"errorSameChannels": "Choose two different channels.",
-  "youtubeChannelPlaceholder": "YouTube name, @handle or link",
-  "errorInvalidYouTubeChannel": "Invalid YouTube channel or link.",
-  "errorInvalidSecondYouTubeChannel": "Enter the second YouTube channel as well."
-},
-"chatStatus": {
-"idle": "Starting…",
-"connecting": "Connecting…",
-"connected": "Connected",
-"reconnecting": "Reconnecting…",
-"error": "Connection error",
-"closed": "Disconnected"
-},
-"chat": {
-"backToHome": "Home",
-"addChannel": "Add channel to multi-chat",
-"addChannelPlaceholder": "Add channel…",
-"addChannelSubmit": "Add",
-"removeChannel": "Remove channel",
-"searchPlaceholder": "Search messages…",
-"switchChannelPlaceholder": "Go to channel…",
-"switchChannelSubmit": "Go",
-"viewersLive": "{count} viewers live",
-"waitingMessages": "Waiting for chat messages…",
-"connectingToChat": "Connecting to chat…",
-"newMessagesButton": "↓ New messages"
-},
+  "meta": {
+    "title": "Chatteia",
+    "description": "Follow the chat of any Twitch channel in real time."
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "open": "Open settings"
+  },
+  "languageSwitcher": {
+    "label": "Language",
+    "srLabel": "Change language"
+  },
+  "home": {
+    "title": "Chatteia",
+    "subtitle": "Read chats from multiple platforms simultaneously.",
+    "channelLabel": "Channel",
+    "channelPlaceholder": "e.g. turbao8 or twitch.tv/turbao8",
+    "twitchChannelPlaceholder": "e.g. turbao8 or twitch.tv/turbao8",
+    "kickChannelPlaceholder": "e.g. turbao8 or kick.com/turbao8",
+    "youtubeChannelPlaceholder": "YouTube name, @handle or link",
+    "tiktokChannelPlaceholder": "TikTok name or @username",
+    "secondChannelPlaceholder": "e.g. turbao8",
+    "singleChat": "Single chat",
+    "multiChat": "Multi-chat",
+    "submit": "Open chat",
+    "multiChatSubmit": "Open multi-chat",
+    "kickStreamerAuthorize": "I'm a KICK streamer",
+    "footer": "No login required for those who just want to read the chat.",
+    "errorInvalidChannel": "Enter a channel name or a valid link.",
+    "errorInvalidYouTubeChannel": "Invalid YouTube channel or link.",
+    "errorInvalidTikTokChannel": "Invalid TikTok channel.",
+    "errorSecondChannel": "Enter the second channel as well.",
+    "errorInvalidSecondYouTubeChannel": "Enter the second YouTube channel as well.",
+    "errorSameChannels": "Choose two different channels."
+  },
+  "chatStatus": {
+    "idle": "Starting…",
+    "connecting": "Connecting…",
+    "connected": "Connected",
+    "reconnecting": "Reconnecting…",
+    "error": "Connection error",
+    "closed": "Disconnected"
+  },
+  "chat": {
+    "backToHome": "Home",
+    "addChannel": "Add channel to multi-chat",
+    "addChannelPlaceholder": "Add channel…",
+    "addChannelSubmit": "Add",
+    "removeChannel": "Remove channel",
+    "searchPlaceholder": "Search messages…",
+    "switchChannelPlaceholder": "Go to channel…",
+    "switchChannelSubmit": "Go",
+    "viewersLive": "{count} viewers live",
+    "waitingMessages": "Waiting for chat messages…",
+    "connectingToChat": "Connecting to chat…",
+    "newMessagesButton": "↓ New messages"
+  },
   "multiChat": {
     "addChannel": "Add channel",
     "platform": "Platform",
@@ -73,27 +75,29 @@
     "errorInvalidYouTubeChannel": "Invalid YouTube channel or link.",
     "errorInvalidTwitchChannel": "Invalid Twitch channel or link.",
     "errorInvalidKickChannel": "Invalid KICK channel or link.",
+    "errorInvalidTikTokInput": "Enter the TikTok name or @username.",
+    "errorInvalidTikTokChannel": "Invalid TikTok channel.",
     "errorDuplicateChannel": "This channel is already in Multi-chat.",
     "errorMaxChannels": "Multi-chat allows a maximum of 4 channels."
   },
-"obs": {
-"copyLink": "+ OBS",
-"linkCopied": "Link copied!"
-},
-"kick": {
-"authorizationRequired": "This streamer has not authorized Chatteia yet.",
-"authorizationDescription": "The KICK chat cannot be displayed until the streamer authorizes access."
-},
-"kickConnect": {
-"back": "Back",
-"title": "Connect your KICK channel",
-"description": "The channel owner authorizes Chatteia once. After that, visitors don't need to log in to read the chat.",
-"authorize": "Authorize my channel",
-"success": {
-"channelAuthorized": "Channel authorized: #{channel}",
-"subscriptionError": "Authorization was saved, but the chat subscription could not be created: {error}",
-"subscriptionCreated": "Visitors can now open the channel without logging in.",
-"testAt": "Test at:"
-}
-}
+  "obs": {
+    "copyLink": "+ OBS",
+    "linkCopied": "Link copied!"
+  },
+  "kick": {
+    "authorizationRequired": "This streamer has not authorized Chatteia yet.",
+    "authorizationDescription": "The KICK chat cannot be displayed until the streamer authorizes access."
+  },
+  "kickConnect": {
+    "back": "Back",
+    "title": "Connect your KICK channel",
+    "description": "The channel owner authorizes Chatteia once. After that, visitors don't need to log in to read the chat.",
+    "authorize": "Authorize my channel",
+    "success": {
+      "channelAuthorized": "Channel authorized: #{channel}",
+      "subscriptionError": "Authorization was saved, but the chat subscription could not be created: {error}",
+      "subscriptionCreated": "Visitors can now open the channel without logging in.",
+      "testAt": "Test at:"
+    }
+  }
 }

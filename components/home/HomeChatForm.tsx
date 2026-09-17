@@ -28,20 +28,20 @@ type HomeChatFormProps = {
 };
 
 export function HomeChatForm({
-    platform,
-    channel,
-    onChannelChange,
-    secondPlatform,
-    secondChannel,
-    onSecondChannelChange,
-    multi,
-    onMultiChange,
-    error,
-    channelPlaceholder,
-    secondChannelPlaceholder,
-    onSubmit,
-    onPlatformChange,
-}: HomeChatFormProps) {
+                                 platform,
+                                 channel,
+                                 onChannelChange,
+                                 secondPlatform,
+                                 secondChannel,
+                                 onSecondChannelChange,
+                                 multi,
+                                 onMultiChange,
+                                 error,
+                                 channelPlaceholder,
+                                 secondChannelPlaceholder,
+                                 onSubmit,
+                                 onPlatformChange,
+                             }: HomeChatFormProps) {
     const t = useTranslations("home");
 
     const params =
@@ -61,10 +61,10 @@ export function HomeChatForm({
                         onMultiChange(false)
                     }
                     className={`rounded-full px-4 py-2 text-sm ${
-    !multi
-        ? "bg-twitch-purple text-white"
-        : "bg-twitch-panel text-zinc-400"
-}`}
+                        !multi
+                            ? "bg-twitch-purple text-white"
+                            : "bg-twitch-panel text-zinc-400"
+                    }`}
                 >
                     {t("singleChat")}
                 </button>
@@ -75,10 +75,10 @@ export function HomeChatForm({
                         onMultiChange(true)
                     }
                     className={`rounded-full px-4 py-2 text-sm ${
-    multi
-        ? "bg-twitch-purple text-white"
-        : "bg-twitch-panel text-zinc-400"
-}`}
+                        multi
+                            ? "bg-twitch-purple text-white"
+                            : "bg-twitch-panel text-zinc-400"
+                    }`}
                 >
                     {t("multiChat")}
                 </button>
@@ -90,8 +90,7 @@ export function HomeChatForm({
                         value={platform}
                         onChange={(event) =>
                             onPlatformChange(
-                                event.target
-                                    .value as Platform
+                                event.target.value as Platform
                             )
                         }
                         className="rounded-lg border border-twitch-border bg-twitch-panel px-3 text-sm outline-none focus:border-twitch-purple"
@@ -106,6 +105,10 @@ export function HomeChatForm({
 
                         <option value="youtube">
                             YouTube
+                        </option>
+
+                        <option value="tiktok">
+                            TikTok
                         </option>
                     </select>
 
@@ -131,8 +134,7 @@ export function HomeChatForm({
                             }
                             onChange={(event) =>
                                 onPlatformChange(
-                                    event.target
-                                        .value as Platform,
+                                    event.target.value as Platform,
                                     true
                                 )
                             }
@@ -149,6 +151,10 @@ export function HomeChatForm({
                             <option value="youtube">
                                 YouTube
                             </option>
+
+                            <option value="tiktok">
+                                TikTok
+                            </option>
                         </select>
 
                         <input
@@ -157,8 +163,7 @@ export function HomeChatForm({
                             }
                             onChange={(event) =>
                                 onSecondChannelChange(
-                                    event.target
-                                        .value
+                                    event.target.value
                                 )
                             }
                             placeholder={
@@ -186,11 +191,11 @@ export function HomeChatForm({
 
                 <a
                     href={`/api/platforms/kick/auth/authorize?locale=${encodeURIComponent(
-        String(
-    params.locale ??
-    "pt-br"
-)
-)}`}
+                        String(
+                            params.locale ??
+                            "pt-br"
+                        )
+                    )}`}
                     className="flex items-center justify-center"
                 >
                     <p className="text-xs font-bold text-zinc-500">

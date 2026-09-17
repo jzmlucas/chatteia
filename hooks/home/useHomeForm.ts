@@ -4,139 +4,200 @@ import { useTranslations } from "next-intl";
 
 import { useRouter } from "@/i18n/navigation";
 
-import { normalizeChannel, type Platform } from "@/lib/chat/normalizeChannel";
+import {
+    normalizeChannel,
+    type Platform,
+} from "@/lib/chat/normalizeChannel";
 
 export function useHomeForm() {
     const router = useRouter();
 
-    const t = useTranslations("home");
+const t = useTranslations("home");
 
-    const [platform, setPlatform] = useState<Platform>("twitch");
-    const [channel, setChannel] = useState("");
-    const [secondPlatform, setSecondPlatform] = useState<Platform>("kick");
-    const [secondChannel, setSecondChannel] = useState("");
-    const [multi, setMulti] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+const [platform, setPlatform] =
+    useState<Platform>("twitch");
 
-    function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
+const [channel, setChannel] =
+    useState("");
 
-        const first = normalizeChannel(platform, channel);
+const [secondPlatform, setSecondPlatform] =
+    useState<Platform>("kick");
 
-        if (!first) {
-            setError(
-                t(
-                    platform === "youtube"
-                        ? "errorInvalidYouTubeChannel"
+const [secondChannel, setSecondChannel] =
+    useState("");
+
+const [multi, setMulti] =
+    useState(false);
+
+const [error, setError] =
+    useState<string | null>(null);
+
+function handleSubmit(
+    event: FormEvent<HTMLFormElement>
+) {
+    event.preventDefault();
+
+    const first = normalizeChannel(
+        platform,
+        channel
+    );
+
+    if (!first) {
+        setError(
+            t(
+                platform === "youtube"
+                    ? "errorInvalidYouTubeChannel"
+                    : platform === "tiktok"
+                        ? "errorInvalidTikTokChannel"
                         : "errorInvalidChannel"
-                )
-            );
+            )
+        );
 
-            return;
-        }
+        return;
+    }
 
-        if (!multi) {
-            setError(null);
-
-            if (platform === "kick") {
-                router.push(`/chat/kick/${first}`);
-
-                return;
-            }
-
-            if (platform === "youtube") {
-                router.push(`/chat/youtube/${first}`);
-
-                return;
-            }
-
-            if (platform === "tiktok") {
-                router.push(`/chat/tiktok/${first}`);
-
-                return;
-            }
-
-            router.push(`/chat/twitch/${first}`);
-
-            return;
-        }
-
-        const second = normalizeChannel(secondPlatform, secondChannel);
-
-        if (!second) {
-            setError(
-                t(
-                    secondPlatform === "youtube"
-                        ? "errorInvalidSecondYouTubeChannel"
-                        : "errorSecondChannel"
-                )
-            );
-
-            return;
-        }
-
-        if (platform === secondPlatform && first === second) {
-            setError(t("errorSameChannels"));
-
-            return;
-        }
-
+    if (!multi) {
         setError(null);
 
-        const channels = [
-            `${platform}:${first}`,
-            `${secondPlatform}:${second}`,
-        ];
+        if (platform === "kick") {
+            router.push(
+                `/chat/kick/${first}`
+            );
+
+            return;
+        }
+
+        if (platform === "youtube") {
+            router.push(
+                `/chat/youtube/${first}`
+            );
+
+            return;
+        }
+
+        if (platform === "tiktok") {
+            router.push(
+                `/chat/tiktok/${first}`
+            );
+
+            return;
+        }
 
         router.push(
-            `/chat/multi-chat?channels=${encodeURIComponent(channels.join(","))}`
+            `/chat/twitch/${first}`
         );
+
+        return;
     }
 
-    function handlePlatformChange(value: Platform, second = false) {
-        if (second) {
-            setSecondPlatform(value);
-            setSecondChannel("");
-        } else {
-            setPlatform(value);
-            setChannel("");
-        }
+    const second =
+        normalizeChannel(
+            secondPlatform,
+            secondChannel
+        );
 
-        setError(null);
+    if (!second) {
+        setError(
+            t(
+                secondPlatform === "youtube"
+                    ? "errorInvalidSecondYouTubeChannel"
+                    : secondPlatform === "tiktok"
+                        ? "errorInvalidTikTokChannel"
+                        : "errorSecondChannel"
+            )
+        );
+
+        return;
     }
 
-    const channelPlaceholder =
-        platform === "youtube"
-            ? t("youtubeChannelPlaceholder")
-            : platform === "kick"
-                ? t("kickChannelPlaceholder")
-                : platform === "tiktok"
-                    ? t("tiktokChannelPlaceholder")
-                    : t("twitchChannelPlaceholder");
+    if (
+        platform === secondPlatform &&
+        first === second
+    ) {
+        setError(
+            t("errorSameChannels")
+        );
 
-    const secondChannelPlaceholder =
-        secondPlatform === "youtube"
-            ? t("youtubeChannelPlaceholder")
-            : secondPlatform === "kick"
-                ? t("kickChannelPlaceholder")
-                : secondPlatform === "tiktok"
-                    ? t("tiktokChannelPlaceholder")
-                    : t("twitchChannelPlaceholder");
+        return;
+    }
 
-    return {
-        platform,
-        channel,
-        setChannel,
-        secondPlatform,
-        secondChannel,
-        setSecondChannel,
-        multi,
-        setMulti,
-        error,
-        setError,
-        channelPlaceholder,
-        secondChannelPlaceholder,
-        handleSubmit,
-        handlePlatformChange,
-    };
+    setError(null);
+
+    const channels = [
+        `${platform}:${first}`,
+        `${secondPlatform}:${second}`,
+    ];
+
+    router.push(
+        `/chat/multi-chat?channels=${encodeURIComponent(
+            channels.join(",")
+)}`
+    );
+}
+
+function handlePlatformChange(
+    value: Platform,
+    second = false
+) {
+    if (second) {
+        setSecondPlatform(value);
+        setSecondChannel("");
+    } else {
+        setPlatform(value);
+        setChannel("");
+    }
+
+    setError(null);
+}
+
+const channelPlaceholder =
+    platform === "youtube"
+        ? t(
+              "youtubeChannelPlaceholder"
+          )
+        : platform === "kick"
+            ? t(
+                  "kickChannelPlaceholder"
+              )
+            : platform === "tiktok"
+                ? t(
+                      "tiktokChannelPlaceholder"
+                  )
+                : t(
+                      "twitchChannelPlaceholder"
+                  );
+
+const secondChannelPlaceholder =
+    secondPlatform === "youtube"
+        ? t(
+              "youtubeChannelPlaceholder"
+          )
+        : secondPlatform === "kick"
+            ? t(
+                  "kickChannelPlaceholder"
+              )
+            : secondPlatform === "tiktok"
+                ? t(
+                      "tiktokChannelPlaceholder"
+                  )
+                : t(
+                      "twitchChannelPlaceholder"
+                  );
+
+return {
+    platform,
+    channel,
+    setChannel,
+    secondPlatform,
+    secondChannel,
+    setSecondChannel,
+    multi,
+    setMulti,
+    error,
+    setError,
+    channelPlaceholder,
+    secondChannelPlaceholder,
+    handleSubmit,
+    handlePlatformChange,
+};
 }

@@ -1,60 +1,62 @@
 {
-"meta": {
-"title": "Chatteia",
-"description": "Sigue el chat de cualquier canal de Twitch en tiempo real."
-},
-"settings": {
-"title": "Configuración",
-"language": "Idioma",
-"open": "Abrir configuración"
-},
-"languageSwitcher": {
-"label": "Idioma",
-"srLabel": "Cambiar idioma"
-},
-"home": {
-"title": "Chatteia",
-"subtitle": "Lee los chats de varias plataformas simultáneamente.",
-"channelLabel": "Canal",
-"channelPlaceholder": "ej.: turbao8 o twitch.tv/turbao8",
-"twitchChannelPlaceholder": "ej.: turbao8 o twitch.tv/turbao8",
-"kickChannelPlaceholder": "ej.: turbao8 o kick.com/turbao8",
-"secondChannelPlaceholder": "ej.: turbao8",
-"singleChat": "Un solo chat",
-"multiChat": "Multi-chat",
-"submit": "Abrir chat",
-"multiChatSubmit": "Abrir multi-chat",
-"kickStreamerAuthorize": "Soy streamer de KICK",
-"footer": "No necesitas iniciar sesión si solo quieres leer el chat.",
-"errorInvalidChannel": "Introduce un nombre de canal o un enlace válido.",
-"errorSecondChannel": "Introduce también el segundo canal.",
-"errorSameChannels": "Elige dos canales diferentes.",
-  "youtubeChannelPlaceholder": "Nombre, @handle o enlace de YouTube",
-  "errorInvalidYouTubeChannel": "Canal o enlace de YouTube no válido.",
-  "errorInvalidSecondYouTubeChannel": "Ingresa también el segundo canal de YouTube."
-},
-"chatStatus": {
-"idle": "Iniciando…",
-"connecting": "Conectando…",
-"connected": "Conectado",
-"reconnecting": "Reconectando…",
-"error": "Error de conexión",
-"closed": "Desconectado"
-},
-"chat": {
-"backToHome": "Inicio",
-"addChannel": "Añadir canal al multi-chat",
-"addChannelPlaceholder": "Añadir canal…",
-"addChannelSubmit": "Añadir",
-"removeChannel": "Eliminar canal",
-"searchPlaceholder": "Buscar mensajes…",
-"switchChannelPlaceholder": "Ir al canal…",
-"switchChannelSubmit": "Ir",
-"viewersLive": "{count} espectadores en directo",
-"waitingMessages": "Esperando mensajes del chat…",
-"connectingToChat": "Conectando al chat…",
-"newMessagesButton": "↓ Nuevos mensajes"
-},
+  "meta": {
+    "title": "Chatteia",
+    "description": "Sigue el chat de cualquier canal de Twitch en tiempo real."
+  },
+  "settings": {
+    "title": "Configuración",
+    "language": "Idioma",
+    "open": "Abrir configuración"
+  },
+  "languageSwitcher": {
+    "label": "Idioma",
+    "srLabel": "Cambiar idioma"
+  },
+  "home": {
+    "title": "Chatteia",
+    "subtitle": "Lee los chats de varias plataformas simultáneamente.",
+    "channelLabel": "Canal",
+    "channelPlaceholder": "ej.: turbao8 o twitch.tv/turbao8",
+    "twitchChannelPlaceholder": "ej.: turbao8 o twitch.tv/turbao8",
+    "kickChannelPlaceholder": "ej.: turbao8 o kick.com/turbao8",
+    "youtubeChannelPlaceholder": "Nombre, @handle o enlace de YouTube",
+    "tiktokChannelPlaceholder": "Nombre o @username de TikTok",
+    "secondChannelPlaceholder": "ej.: turbao8",
+    "singleChat": "Un solo chat",
+    "multiChat": "Multi-chat",
+    "submit": "Abrir chat",
+    "multiChatSubmit": "Abrir multi-chat",
+    "kickStreamerAuthorize": "Soy streamer de KICK",
+    "footer": "No necesitas iniciar sesión si solo quieres leer el chat.",
+    "errorInvalidChannel": "Introduce un nombre de canal o un enlace válido.",
+    "errorInvalidYouTubeChannel": "Canal o enlace de YouTube no válido.",
+    "errorInvalidTikTokChannel": "Canal de TikTok no válido.",
+    "errorSecondChannel": "Introduce también el segundo canal.",
+    "errorInvalidSecondYouTubeChannel": "Ingresa también el segundo canal de YouTube.",
+    "errorSameChannels": "Elige dos canales diferentes."
+  },
+  "chatStatus": {
+    "idle": "Iniciando…",
+    "connecting": "Conectando…",
+    "connected": "Conectado",
+    "reconnecting": "Reconectando…",
+    "error": "Error de conexión",
+    "closed": "Desconectado"
+  },
+  "chat": {
+    "backToHome": "Inicio",
+    "addChannel": "Añadir canal al multi-chat",
+    "addChannelPlaceholder": "Añadir canal…",
+    "addChannelSubmit": "Añadir",
+    "removeChannel": "Eliminar canal",
+    "searchPlaceholder": "Buscar mensajes…",
+    "switchChannelPlaceholder": "Ir al canal…",
+    "switchChannelSubmit": "Ir",
+    "viewersLive": "{count} espectadores en directo",
+    "waitingMessages": "Esperando mensajes del chat…",
+    "connectingToChat": "Conectando al chat…",
+    "newMessagesButton": "↓ Nuevos mensajes"
+  },
   "multiChat": {
     "addChannel": "Agregar canal",
     "platform": "Plataforma",
@@ -62,6 +64,7 @@
     "twitchChannelPlaceholder": "Nombre o enlace de Twitch",
     "kickChannelPlaceholder": "Nombre o enlace de KICK",
     "youtubeChannelPlaceholder": "Nombre, @handle o enlace de YouTube",
+    "tiktokChannelPlaceholder": "Nombre o @username de TikTok",
     "addChannelSubmit": "Agregar",
     "removeChannelAria": "Eliminar #{channel}",
     "connectedCount": "{connected}/{total} conectados",
@@ -69,31 +72,33 @@
     "noChannels": "No hay canales agregados.",
     "waitingMessages": "Esperando mensajes de los chats…",
     "errorInvalidYouTubeInput": "Ingresa el nombre, @handle o enlace de YouTube.",
+    "errorInvalidTikTokInput": "Ingresa el nombre o @username de TikTok.",
     "errorAtNotAllowed": "Ingresa el nombre o enlace del canal. @ no se acepta en esta plataforma.",
     "errorInvalidYouTubeChannel": "Canal o enlace de YouTube no válido.",
     "errorInvalidTwitchChannel": "Canal o enlace de Twitch no válido.",
     "errorInvalidKickChannel": "Canal o enlace de KICK no válido.",
+    "errorInvalidTikTokChannel": "Canal de TikTok no válido.",
     "errorDuplicateChannel": "Este canal ya está en el Multi-chat.",
     "errorMaxChannels": "El Multi-chat permite un máximo de 4 canales."
   },
-"obs": {
-"copyLink": "+ OBS",
-"linkCopied": "¡Enlace copiado!"
-},
-"kick": {
-"authorizationRequired": "Este streamer aún no ha autorizado a Chatteia.",
-"authorizationDescription": "El chat de KICK no puede mostrarse hasta que el streamer autorice el acceso."
-},
-"kickConnect": {
-"back": "Volver",
-"title": "Conecta tu canal de KICK",
-"description": "El propietario del canal autoriza a Chatteia una sola vez. Después, los visitantes no necesitan iniciar sesión para leer el chat.",
-"authorize": "Autorizar mi canal",
-"success": {
-"channelAuthorized": "Canal autorizado: #{channel}",
-"subscriptionError": "La autorización se guardó, pero no se pudo crear la suscripción al chat: {error}",
-"subscriptionCreated": "Los visitantes ahora pueden abrir el canal sin iniciar sesión.",
-"testAt": "Prueba en:"
-}
-}
+  "obs": {
+    "copyLink": "+ OBS",
+    "linkCopied": "¡Enlace copiado!"
+  },
+  "kick": {
+    "authorizationRequired": "Este streamer aún no ha autorizado a Chatteia.",
+    "authorizationDescription": "El chat de KICK no puede mostrarse hasta que el streamer autorice el acceso."
+  },
+  "kickConnect": {
+    "back": "Volver",
+    "title": "Conecta tu canal de KICK",
+    "description": "El propietario del canal autoriza a Chatteia una sola vez. Después, los visitantes no necesitan iniciar sesión para leer el chat.",
+    "authorize": "Autorizar mi canal",
+    "success": {
+      "channelAuthorized": "Canal autorizado: #{channel}",
+      "subscriptionError": "La autorización se guardó, pero no se pudo crear la suscripción al chat: {error}",
+      "subscriptionCreated": "Los visitantes ahora pueden abrir el canal sin iniciar sesión.",
+      "testAt": "Prueba en:"
+    }
+  }
 }
