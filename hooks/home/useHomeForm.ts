@@ -50,6 +50,12 @@ export function useHomeForm() {
                 return;
             }
 
+            if (platform === "tiktok") {
+                router.push(`/chat/tiktok/${first}`);
+
+                return;
+            }
+
             router.push(`/chat/twitch/${first}`);
 
             return;
@@ -104,14 +110,18 @@ export function useHomeForm() {
             ? t("youtubeChannelPlaceholder")
             : platform === "kick"
                 ? t("kickChannelPlaceholder")
-                : t("twitchChannelPlaceholder");
+                : platform === "tiktok"
+                    ? t("tiktokChannelPlaceholder")
+                    : t("twitchChannelPlaceholder");
 
     const secondChannelPlaceholder =
         secondPlatform === "youtube"
             ? t("youtubeChannelPlaceholder")
             : secondPlatform === "kick"
                 ? t("kickChannelPlaceholder")
-                : t("twitchChannelPlaceholder");
+                : secondPlatform === "tiktok"
+                    ? t("tiktokChannelPlaceholder")
+                    : t("twitchChannelPlaceholder");
 
     return {
         platform,

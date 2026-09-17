@@ -12,3 +12,81 @@
 ::-webkit-scrollbar-track {
   background-color: transparent;
 }
+@keyframes obs-chat-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes obs-chat-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes obs-chat-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.obs-chat-animation-fade {
+  animation: obs-chat-fade 0.35s ease-out both;
+}
+
+.obs-chat-animation-slide-up {
+  animation: obs-chat-slide-up 0.35s ease-out both;
+}
+
+.obs-chat-animation-slide-left {
+  animation: obs-chat-slide-left 0.35s ease-out both;
+}
+@keyframes obs-chat-preview-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes obs-chat-preview-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes obs-chat-preview-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

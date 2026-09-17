@@ -1,4 +1,4 @@
-export type Platform = "twitch" | "kick" | "youtube";
+export type Platform = "twitch" | "kick" | "youtube" | "tiktok";
 
 export function normalizeTwitchChannel(input: string): string | null {
     const trimmed = input.trim();
@@ -119,6 +119,26 @@ export function normalizeYouTubeChannel(input: string): string | null {
     return candidate.toLowerCase();
 }
 
+export function normalizeTikTokChannel(input: string): string | null {
+    const trimmed = input.trim();
+
+    if (!trimmed) {
+        return null;
+    }
+
+    const match = trimmed.match(
+        /^(?:https?:\/\/)?(?:www\.)?tiktok\.com\/@([a-zA-Z0-9_.]+)(?:[/?#].*)?$/i
+    );
+
+    const candidate = match?.[1] ?? trimmed.replace(/^@/, "");
+
+    if (!/^[a-zA-Z0-9_.]{2,50}$/.test(candidate)) {
+        return null;
+    }
+
+    return candidate.toLowerCase();
+}
+
 export function normalizeChannel(
     platform: Platform,
     input: string
@@ -129,6 +149,10 @@ export function normalizeChannel(
 
     if (platform === "kick") {
         return normalizeKickChannel(input);
+    }
+
+    if (platform === "tiktok") {
+        return normalizeTikTokChannel(input);
     }
 
     return normalizeYouTubeChannel(input);

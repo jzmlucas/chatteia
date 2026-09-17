@@ -9,7 +9,14 @@ import {
 import {
     ChatFeed,
 } from "@/components/chat/ChatFeed";
-import { useObsTransparentBackground } from "@/hooks/chat/useObsTransparentBackground";
+
+import {
+    useObsTransparentBackground,
+} from "@/hooks/chat/useObsTransparentBackground";
+
+import {
+    useObsChatSettings,
+} from "@/hooks/chat/useObsChatSettings";
 
 export default function ObsChatPage() {
     useObsTransparentBackground();
@@ -24,13 +31,37 @@ export default function ObsChatPage() {
         params.channel
     );
 
+    const {
+        settings,
+    } = useObsChatSettings();
+
+    const visibleMessages =
+        messages.slice(
+            -settings.maxMessages
+        );
+
     return (
-        <main className="h-screen w-screen overflow-hidden bg-transparent">
+        <main
+            className="h-screen w-screen overflow-hidden bg-transparent"
+            style={{
+                fontFamily:
+                    settings.fontFamily,
+                fontSize:
+                    `${settings.fontSize}px`,
+                fontWeight:
+                    settings.fontWeight,
+            }}
+        >
             <ChatFeed
-                messages={messages}
+                messages={
+                    visibleMessages
+                }
                 showChannelTag={false}
                 variant="obs"
                 emptyLabel=""
+                obsSettings={
+                    settings
+                }
             />
         </main>
     );

@@ -334,6 +334,75 @@ function normalizeYouTubeChannel(
   return channel.toLowerCase();
 }
 
+function parseTikTokChannel(
+    value: string
+) {
+  const input =
+      value.trim();
+
+  if (
+      /^https?:\/\//i.test(input) ||
+      /^www\./i.test(input) ||
+      /^tiktok\.com\//i.test(input)
+  ) {
+    let url: URL;
+
+    try {
+      const normalizedUrl =
+          /^https?:\/\//i.test(input)
+              ? input
+              : `https://${input}`;
+
+      url = new URL(
+          normalizedUrl
+      );
+    } catch {
+      return null;
+    }
+
+    const hostname =
+        url.hostname
+            .toLowerCase()
+            .replace(
+                /^www\./,
+                ""
+            );
+
+    if (
+        hostname !==
+        "tiktok.com"
+    ) {
+      return null;
+    }
+
+    const parts =
+        url.pathname
+            .split("/")
+            .filter(Boolean);
+
+    if (
+        parts.length < 1 ||
+        !parts[0].startsWith("@")
+    ) {
+      return null;
+    }
+
+    return parts[0].slice(1);
+  }
+
+  return normalizeLogin(
+      input
+  ).replace(/^@/, "");
+}
+
+function isValidTikTokChannel(
+    value: string
+) {
+  return /^[a-zA-Z0-9_.]{2,50}$/.test(
+      value
+  );
+}
+
 export function normalizeChatTarget(
     value: string
 ): ChatTarget | null {
@@ -431,6 +500,31 @@ export function normalizeChatTarget(
       platform: "youtube",
       channel:
       normalized,
+    };
+  }
+
+  if (
+      platform ===
+      "tiktok"
+  ) {
+    const normalized =
+        parseTikTokChannel(
+            channel
+        );
+
+    if (
+        !normalized ||
+        !isValidTikTokChannel(
+            normalized
+        )
+    ) {
+      return null;
+    }
+
+    return {
+      platform: "tiktok",
+      channel:
+          normalized.toLowerCase(),
     };
   }
 

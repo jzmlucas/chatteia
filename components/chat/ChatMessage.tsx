@@ -8,6 +8,10 @@ import {
     ChatMessageContent,
 } from "./ChatMessageContent";
 
+import type {
+    ObsChatSettings,
+} from "@/types/chat/obs";
+
 export type FeedMessage =
     UnifiedChatMessage & {
     channelLabel?: string;
@@ -15,36 +19,98 @@ export type FeedMessage =
 };
 
 export function ChatMessage({
-                                message,
-                                showChannelTag,
-                            }: {
+    message,
+    showChannelTag,
+    obsSettings,
+}: {
     message: FeedMessage;
     showChannelTag: boolean;
+    obsSettings?: ObsChatSettings;
 }) {
+    const isObs = !!obsSettings;
+
+    const usernameColor =
+        isObs
+            ? obsSettings.usernameColor
+            : message.color;
+
+    const messageColor =
+        isObs
+            ? obsSettings.messageColor
+            : undefined;
+
+    const backgroundColor =
+        isObs &&
+        obsSettings.messageBackground
+            ? hexToRgba(
+                  obsSettings.messageBackgroundColor,
+                  obsSettings.messageBackgroundOpacity
+              )
+            : undefined;
+
+    const animationClass =
+        isObs
+            ? getAnimationClass(
+                  obsSettings.animation
+              )
+            : "";
+
     return (
         <div
-            className="
-        flex
-        flex-wrap
-        items-start
-        gap-1
-        break-words
-        text-sm
-        leading-relaxed
-      "
+            className={[
+                "flex",
+                "flex-wrap",
+                "items-start",
+                "break-words",
+                "leading-relaxed",
+                isObs
+                    ? "w-full"
+                    : "gap-1 text-sm",
+                animationClass,
+            ].join(" ")}
+            style={
+                isObs
+                    ? {
+                          fontFamily:
+                              obsSettings.fontFamily,
+
+                          fontSize:
+                              `${obsSettings.fontSize}px`,
+
+                          fontWeight:
+                              obsSettings.fontWeight,
+
+                          gap: "0.25rem",
+
+                          padding:
+                              obsSettings.messageBackground
+                                  ? "8px 12px"
+                                  : "0",
+
+                          borderRadius:
+                              `${obsSettings.borderRadius}px`,
+
+                          backgroundColor:
+                              backgroundColor,
+
+                          marginBottom:
+                              "0",
+                      }
+                    : undefined
+            }
         >
             {showChannelTag && (
                 <span
                     className="
-            shrink-0
-            rounded
-            px-1.5
-            py-0.5
-            text-[10px]
-            font-bold
-            uppercase
-            tracking-wide
-          "
+                        shrink-0
+                        rounded
+                        px-1.5
+                        py-0.5
+                        text-[10px]
+                        font-bold
+                        uppercase
+                        tracking-wide
+                    "
                     style={{
                         backgroundColor:
                             `${message.channelColor ?? "#9146FF"}22`,
@@ -53,72 +119,214 @@ export function ChatMessage({
                             "#9146FF",
                     }}
                 >
-          {message.channelLabel ??
-              message.channel}
-        </span>
+                    {message.channelLabel ??
+                        message.channel}
+                </span>
             )}
 
-            {message.badges.length > 0 && (
-                <span
-                    className="
-            inline-flex
-            shrink-0
-            items-center
-            gap-1
-            translate-y-[1px]
-          "
-                >
-          {message.badges.map(
-              (badge) => (
-                  <img
-                      key={badge.id}
-                      src={badge.imageUrl}
-                      alt={
-                          badge.name ??
-                          ""
-                      }
-                      title={
-                          badge.description
-                              ? `${badge.name ?? ""} — ${badge.description}`
-                              : badge.name ?? ""
-                      }
-                      loading="lazy"
-                      className="
-                  h-[18px]
-                  w-[18px]
-                  shrink-0
-                  object-contain
-                "
-                  />
-              )
-          )}
-        </span>
+            {isObs &&
+                obsSettings.showBadges &&
+                message.badges.length > 0 && (
+                    <span
+                        className="
+                            inline-flex
+                            shrink-0
+                            items-center
+                            gap-1
+                            translate-y-[1px]
+                        "
+                    >
+                        {message.badges.map(
+                            (badge) => (
+                                <img
+                                    key={
+                                        badge.id
+                                    }
+                                    src={
+                                        badge.imageUrl
+                                    }
+                                    alt={
+                                        badge.name ??
+                                        ""
+                                    }
+                                    title={
+                                        badge.description
+                                            ? `${badge.name ?? ""} — ${badge.description}`
+                                            : badge.name ??
+                                              ""
+                                    }
+                                    loading="lazy"
+                                    className="
+                                        h-[18px]
+                                        w-[18px]
+                                        shrink-0
+                                        object-contain
+                                    "
+                                />
+                            )
+                        )}
+                    </span>
+                )}
+
+            {!isObs &&
+                message.badges.length >
+                    0 && (
+                    <span
+                        className="
+                            inline-flex
+                            shrink-0
+                            items-center
+                            gap-1
+                            translate-y-[1px]
+                        "
+                    >
+                        {message.badges.map(
+                            (badge) => (
+                                <img
+                                    key={
+                                        badge.id
+                                    }
+                                    src={
+                                        badge.imageUrl
+                                    }
+                                    alt={
+                                        badge.name ??
+                                        ""
+                                    }
+                                    title={
+                                        badge.description
+                                            ? `${badge.name ?? ""} — ${badge.description}`
+                                            : badge.name ??
+                                              ""
+                                    }
+                                    loading="lazy"
+                                    className="
+                                        h-[18px]
+                                        w-[18px]
+                                        shrink-0
+                                        object-contain
+                                    "
+                                />
+                            )
+                        )}
+                    </span>
+                )}
+
+            {(!isObs ||
+                obsSettings.showUsername) && (
+                <>
+                    <span
+                        className="font-semibold"
+                        style={{
+                            color:
+                                usernameColor,
+                        }}
+                    >
+                        {
+                            message.displayName
+                        }
+                    </span>
+
+                    <span
+                        style={
+                            isObs
+                                ? {
+                                      color:
+                                          messageColor,
+                                  }
+                                : undefined
+                        }
+                        className={
+                            isObs
+                                ? undefined
+                                : "text-zinc-400"
+                        }
+                    >
+                        :
+                    </span>
+                </>
             )}
-
-            <span
-                className="font-semibold"
-                style={{
-                    color: message.color,
-                }}
-            >
-        {message.displayName}
-      </span>
-
-            <span className="text-zinc-400">
-        :
-      </span>
 
             <span
                 className={
-                    message.isAction
+                    message.isAction &&
+                    !isObs
                         ? "italic text-zinc-300"
-                        : "text-zinc-100"
+                        : undefined
+                }
+                style={
+                    isObs
+                        ? {
+                              color:
+                                  messageColor,
+                          }
+                        : undefined
                 }
             >
-        <ChatMessageContent
-            message={message}
-        />
-      </span>
+                <ChatMessageContent
+                    message={message}
+                />
+            </span>
         </div>
     );
+}
+
+function hexToRgba(
+    hex: string,
+    opacity: number
+): string {
+    const normalized =
+        hex.replace("#", "");
+
+    if (
+        normalized.length !== 6 ||
+        !/^[0-9A-Fa-f]{6}$/.test(
+            normalized
+        )
+    ) {
+        return `rgba(0, 0, 0, ${
+    opacity / 100
+})`;
+    }
+
+    const red = parseInt(
+        normalized.substring(0, 2),
+        16
+    );
+
+    const green = parseInt(
+        normalized.substring(2, 4),
+        16
+    );
+
+    const blue = parseInt(
+        normalized.substring(4, 6),
+        16
+    );
+
+    return `rgba(${red}, ${green}, ${blue}, ${
+    Math.max(
+        0,
+        Math.min(100, opacity)
+    ) / 100
+})`;
+}
+
+function getAnimationClass(
+    animation: ObsChatSettings["animation"]
+): string {
+    switch (animation) {
+        case "fade":
+            return "obs-chat-animation-fade";
+
+        case "slide-left":
+            return "obs-chat-animation-slide-left";
+
+        case "slide-up":
+            return "obs-chat-animation-slide-up";
+
+        case "none":
+        default:
+            return "";
+    }
 }
