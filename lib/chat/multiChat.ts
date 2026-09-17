@@ -1,8 +1,17 @@
 import type { FeedMessage } from "@/components/chat/ChatFeed";
 
-export const CHANNEL_COLORS = ["#9146FF", "#53FC18", "#FF0000", "#00D4FF"];
+export const CHANNEL_COLORS = [
+    "#9146FF",
+    "#53FC18",
+    "#FF0000",
+    "#00D4FF",
+];
 
-export type MultiPlatform = "twitch" | "kick" | "youtube";
+export type MultiPlatform =
+    | "twitch"
+    | "kick"
+    | "youtube"
+    | "tiktok";
 
 export type Connection = {
     status: string;
@@ -34,6 +43,14 @@ export function prepareChannelInput(
         }
 
         return `kick:${input}`;
+    }
+
+    if (platform === "tiktok") {
+        if (input.startsWith("@")) {
+            return `tiktok:${input}`;
+        }
+
+        return `tiktok:${input}`;
     }
 
     return `youtube:${input}`;
