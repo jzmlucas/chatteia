@@ -1,7 +1,6 @@
 "use client";
 
 import {
-    useCallback,
     useEffect,
     useRef,
     useState,
@@ -13,19 +12,15 @@ import type {
 } from "@/lib/chat/types";
 
 const MAX_MESSAGES = 300;
-
-function normalizeChannel(channel: string) {
-    return channel
-        .trim()
-        .replace(/^@/, "")
-        .toLowerCase();
-}
+const RECONNECT_DELAY = 3000;
 
 export function useTikTokChannel(
     channel: string
 ) {
-    const normalizedChannel =
-        normalizeChannel(channel);
+    const normalizedChannel = channel
+        .trim()
+        .replace(/^@/, "")
+        .toLowerCase();
 
     const [messages, setMessages] =
         useState<UnifiedChatMessage[]>([]);
@@ -40,135 +35,212 @@ export function useTikTokChannel(
         useRef<EventSource | null>(null);
 
     const reconnectTimerRef =
-        useRef<ReturnType<typeof setTimeout> | null>(
-            null
-        );
+        useRef<ReturnType<
+            typeof setTimeout
+        > | null>(null);
 
     const stoppedRef =
         useRef(false);
 
-    const connect = useCallback(() => {
+    useEffect(() => {
+        stoppedRef.current = false;
+
         if (!normalizedChannel) {
             setStatus("error");
             setError("Canal inválido.");
             return;
         }
 
-        if (stoppedRef.current) {
+        const workerUrl =
+            process.env.NEXT_PUBLIC_TIKTOK_WORKER_URL;
+
+        if (!workerUrl) {
+            setStatus("error");
+            setError(
+                "Worker do TikTok não configurado."
+            );
+
             return;
         }
 
-        eventSourceRef.current?.close();
+        const connect = () => {
+            if (stoppedRef.current) {
+                return;
+            }
 
-        setStatus("connecting");
-        setError(null);
+            setStatus("connecting");
+            setError(null);
 
-        const source = new EventSource(
-            `/api/platforms/tiktok/stream?channel=${encodeURIComponent(
-                normalizedChannel
-            )}`
-        );
+            const url =
+                `${workerUrl.replace(
+                    /\/$/,
+                    ""
+                )}/stream?channel=${encodeURIComponent(
+                    normalizedChannel
+                )}`;
 
-        eventSourceRef.current = source;
+            const source =
+                new EventSource(url);
 
-        source.addEventListener(
-            "ready",
-            () => {
-                if (stoppedRef.current) {
+            eventSourceRef.current =
+                source;
+
+            source.addEventListener(
+                "ready",
+                () => {
+                    if (
+                        stoppedRef.current
+                    ) {
+                        return;
+                    }
+
+                    setStatus("connected");
+                    setError(null);
+                }
+            );
+
+            source.onmessage = (event) => {
+                if (
+                    stoppedRef.current
+                ) {
                     return;
                 }
 
-                setStatus("connected");
-                setError(null);
-            }
-        );
-
-        source.onmessage = (event) => {
-            if (stoppedRef.current) {
-                return;
-            }
-
-            try {
-                const message =
-                    JSON.parse(
-                        event.data
-                    ) as UnifiedChatMessage;
-
-                setMessages(
-                    (current) => {
-                        const next = [
-                            ...current,
-                            message,
-                        ];
-
-                        if (
-                            next.length >
-                            MAX_MESSAGES
-                        ) {
-                            return next.slice(
-                                next.length -
-                                MAX_MESSAGES
-                            );
-                        }
-
-                        return next;
-                    }
-                );
-
-                setStatus("connected");
-                setError(null);
-            } catch {
-                setError(
-                    "Mensagem inválida recebida do TikTok."
-                );
-            }
-        };
-
-        source.onerror = () => {
-            if (stoppedRef.current) {
-                return;
-            }
-
-            source.close();
-
-            setStatus("reconnecting");
-
-            if (
-                reconnectTimerRef.current
-            ) {
-                clearTimeout(
-                    reconnectTimerRef.current
-                );
-            }
-
-            reconnectTimerRef.current =
-                setTimeout(() => {
-                    reconnectTimerRef.current =
-                        null;
+                try {
+                    const payload =
+                        JSON.parse(
+                            event.data
+                        );
 
                     if (
-                        !stoppedRef.current
+                        payload.type ===
+                        "chat"
                     ) {
-                        connect();
-                    }
-                }, 3000);
-        };
-    }, [normalizedChannel]);
+                        const eventData =
+                            payload.event;
 
-    useEffect(() => {
-        stoppedRef.current = false;
+                        const message: UnifiedChatMessage =
+                            {
+                                id: `${eventData.userId || eventData.uniqueId}-${Date.now()}-${Math.random()
+                                    .toString(
+                                        36
+                                    )
+                                    .slice(
+                                        2
+                                    )}`,
+                                platform:
+                                    "tiktok",
+                                channel:
+                                normalizedChannel,
+                                channelId:
+                                    null,
+                                username:
+                                eventData.uniqueId,
+                                displayName:
+                                    eventData.nickname ||
+                                    eventData.uniqueId,
+                                color:
+                                    eventData.isModerator
+                                        ? "#25F4EE"
+                                        : eventData.isSubscriber
+                                            ? "#FE2C55"
+                                            : "#FFFFFF",
+                                message:
+                                eventData.comment,
+                                badges: [],
+                                emotes: [],
+                                isAction:
+                                    false,
+                                timestamp:
+                                    Date.now(),
+                            };
+
+                        setMessages(
+                            (current) => {
+                                const next =
+                                    [
+                                        ...current,
+                                        message,
+                                    ];
+
+                                if (
+                                    next.length >
+                                    MAX_MESSAGES
+                                ) {
+                                    return next.slice(
+                                        -MAX_MESSAGES
+                                    );
+                                }
+
+                                return next;
+                            }
+                        );
+                    }
+
+                    if (
+                        payload.type ===
+                        "error"
+                    ) {
+                        setStatus("error");
+
+                        setError(
+                            payload.error ||
+                            "Erro de conexão."
+                        );
+                    }
+
+                    if (
+                        payload.type ===
+                        "disconnected"
+                    ) {
+                        setStatus(
+                            "reconnecting"
+                        );
+                    }
+                } catch (parseError) {
+                    console.error(
+                        "[TIKTOK] Erro ao processar mensagem:",
+                        parseError
+                    );
+                }
+            };
+
+            source.onerror = () => {
+                if (
+                    stoppedRef.current
+                ) {
+                    return;
+                }
+
+                source.close();
+
+                eventSourceRef.current =
+                    null;
+
+                setStatus(
+                    "reconnecting"
+                );
+
+                if (
+                    reconnectTimerRef.current
+                ) {
+                    clearTimeout(
+                        reconnectTimerRef.current
+                    );
+                }
+
+                reconnectTimerRef.current =
+                    setTimeout(() => {
+                        connect();
+                    }, RECONNECT_DELAY);
+            };
+        };
 
         setMessages([]);
-        setStatus("idle");
-        setError(null);
-
         connect();
 
         return () => {
             stoppedRef.current = true;
-
-            eventSourceRef.current?.close();
-            eventSourceRef.current = null;
 
             if (
                 reconnectTimerRef.current
@@ -180,19 +252,22 @@ export function useTikTokChannel(
                 reconnectTimerRef.current =
                     null;
             }
-        };
-    }, [connect]);
 
-    const clearMessages =
-        useCallback(() => {
-            setMessages([]);
-        }, []);
+            if (
+                eventSourceRef.current
+            ) {
+                eventSourceRef.current.close();
+
+                eventSourceRef.current =
+                    null;
+            }
+        };
+    }, [normalizedChannel]);
 
     return {
-        channel: normalizedChannel,
         messages,
         status,
         error,
-        clearMessages,
+        channel: normalizedChannel,
     };
 }
