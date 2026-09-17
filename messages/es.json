@@ -28,7 +28,10 @@
 "footer": "No necesitas iniciar sesión si solo quieres leer el chat.",
 "errorInvalidChannel": "Introduce un nombre de canal o un enlace válido.",
 "errorSecondChannel": "Introduce también el segundo canal.",
-"errorSameChannels": "Elige dos canales diferentes."
+"errorSameChannels": "Elige dos canales diferentes.",
+  "youtubeChannelPlaceholder": "Nombre, @handle o enlace de YouTube",
+  "errorInvalidYouTubeChannel": "Canal o enlace de YouTube no válido.",
+  "errorInvalidSecondYouTubeChannel": "Ingresa también el segundo canal de YouTube."
 },
 "chatStatus": {
 "idle": "Iniciando…",
@@ -52,17 +55,27 @@
 "connectingToChat": "Conectando al chat…",
 "newMessagesButton": "↓ Nuevos mensajes"
 },
-"multiChat": {
-"addChannel": "Añadir canal",
-"platform": "Plataforma",
-"addChannelPlaceholder": "Añadir canal…",
-"addChannelSubmit": "Añadir",
-"removeChannelAria": "Eliminar #{channel}",
-"connectedCount": "{connected}/{total} conectados",
-"searchPlaceholder": "Buscar mensajes…",
-"noChannels": "No hay canales añadidos.",
-"waitingMessages": "Esperando mensajes de los chats…"
-},
+  "multiChat": {
+    "addChannel": "Agregar canal",
+    "platform": "Plataforma",
+    "addChannelPlaceholder": "Agregar canal…",
+    "twitchChannelPlaceholder": "Nombre o enlace de Twitch",
+    "kickChannelPlaceholder": "Nombre o enlace de KICK",
+    "youtubeChannelPlaceholder": "Nombre, @handle o enlace de YouTube",
+    "addChannelSubmit": "Agregar",
+    "removeChannelAria": "Eliminar #{channel}",
+    "connectedCount": "{connected}/{total} conectados",
+    "searchPlaceholder": "Buscar mensajes…",
+    "noChannels": "No hay canales agregados.",
+    "waitingMessages": "Esperando mensajes de los chats…",
+    "errorInvalidYouTubeInput": "Ingresa el nombre, @handle o enlace de YouTube.",
+    "errorAtNotAllowed": "Ingresa el nombre o enlace del canal. @ no se acepta en esta plataforma.",
+    "errorInvalidYouTubeChannel": "Canal o enlace de YouTube no válido.",
+    "errorInvalidTwitchChannel": "Canal o enlace de Twitch no válido.",
+    "errorInvalidKickChannel": "Canal o enlace de KICK no válido.",
+    "errorDuplicateChannel": "Este canal ya está en el Multi-chat.",
+    "errorMaxChannels": "El Multi-chat permite un máximo de 4 canales."
+  },
 "obs": {
 "copyLink": "+ OBS",
 "linkCopied": "¡Enlace copiado!"

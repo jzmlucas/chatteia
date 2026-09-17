@@ -284,7 +284,7 @@ export default function ChatPage() {
             <header className="sticky top-0 z-20 shrink-0 border-b border-twitch-border bg-twitch-panel px-4 py-3">
                 <div className="flex flex-wrap items-center gap-3">
                     <Link
-                        href="/"
+                        href="/public"
                         className="shrink-0 text-sm text-zinc-400 transition-colors hover:text-white"
                     >
                         <img

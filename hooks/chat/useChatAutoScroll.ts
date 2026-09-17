@@ -1,12 +1,14 @@
 "use client";
 
 import {
+    useCallback,
     useEffect,
+    useLayoutEffect,
     useRef,
     useState,
 } from "react";
 
-const BOTTOM_THRESHOLD = 80;
+const BOTTOM_THRESHOLD = 100;
 
 type UseChatAutoScrollOptions = {
     messageCount: number;
@@ -24,90 +26,124 @@ export function useChatAutoScroll({
     const scrollRef =
         useRef<HTMLDivElement>(null);
 
+    const autoScrollRef =
+        useRef(true);
+
     const previousMessageCountRef =
         useRef(messageCount);
 
-    const isInitialScrollRef =
-        useRef(true);
-
-    const isProgrammaticScrollRef =
+    const programmaticScrollRef =
         useRef(false);
 
-    useEffect(() => {
+    const unlockTimerRef =
+        useRef<ReturnType<
+            typeof setTimeout
+        > | null>(null);
+
+    const rafRef =
+        useRef<number | null>(null);
+
+    const scrollToBottomNow =
+        useCallback(() => {
+            const element =
+                scrollRef.current;
+
+            if (!element) {
+                return;
+            }
+
+            programmaticScrollRef.current =
+                true;
+
+            element.scrollTop =
+                element.scrollHeight -
+                element.clientHeight;
+
+            if (
+                unlockTimerRef.current
+            ) {
+                clearTimeout(
+                    unlockTimerRef.current
+                );
+            }
+
+            unlockTimerRef.current =
+                setTimeout(() => {
+                    programmaticScrollRef.current =
+                        false;
+                }, 50);
+        }, []);
+
+    const isAtBottom =
+        useCallback(
+            (
+                element: HTMLDivElement
+            ) => {
+                return (
+                    element.scrollHeight -
+                    element.scrollTop -
+                    element.clientHeight <=
+                    BOTTOM_THRESHOLD
+                );
+            },
+            []
+        );
+
+    useLayoutEffect(() => {
         const previousCount =
             previousMessageCountRef.current;
 
-        const currentCount =
-            messageCount;
+        const addedMessages =
+            messageCount -
+            previousCount;
 
         previousMessageCountRef.current =
-            currentCount;
+            messageCount;
 
-        if (currentCount <= previousCount) {
+        if (
+            addedMessages <= 0
+        ) {
             return;
         }
 
-        const addedMessages =
-            currentCount - previousCount;
+        if (
+            autoScrollRef.current
+        ) {
+            if (
+                rafRef.current !==
+                null
+            ) {
+                cancelAnimationFrame(
+                    rafRef.current
+                );
+            }
 
-        if (autoScroll) {
-            requestAnimationFrame(() => {
-                const element =
-                    scrollRef.current;
+            rafRef.current =
+                requestAnimationFrame(() => {
+                    rafRef.current =
+                        null;
 
-                if (!element) {
-                    return;
-                }
-
-                isProgrammaticScrollRef.current =
-                    true;
-
-                element.scrollTo({
-                    top: element.scrollHeight,
-                    behavior:
-                        isInitialScrollRef.current
-                            ? "auto"
-                            : "smooth",
+                    scrollToBottomNow();
                 });
 
-                isInitialScrollRef.current =
-                    false;
-
-                window.setTimeout(() => {
-                    isProgrammaticScrollRef.current =
-                        false;
-                }, 100);
-            });
-
-            setNewMessagesCount(0);
+            setNewMessagesCount(
+                0
+            );
 
             return;
         }
 
         setNewMessagesCount(
-            (count) =>
-                count + addedMessages
+            (current) =>
+                current +
+                addedMessages
         );
     }, [
         messageCount,
-        autoScroll,
+        scrollToBottomNow,
     ]);
 
-    function isAtBottom(
-        element: HTMLDivElement
-    ) {
-        const distanceFromBottom =
-            element.scrollHeight -
-            element.scrollTop -
-            element.clientHeight;
-
-        return (
-            distanceFromBottom <=
-            BOTTOM_THRESHOLD
-        );
-    }
-
-    function handleScroll() {
+    useLayoutEffect(() => {
         const element =
             scrollRef.current;
 
@@ -116,23 +152,24 @@ export function useChatAutoScroll({
         }
 
         if (
-            isProgrammaticScrollRef.current
+            messageCount === 0
         ) {
             return;
         }
 
-        const atBottom =
-            isAtBottom(element);
-
-        if (atBottom) {
-            setAutoScroll(true);
-            setNewMessagesCount(0);
-        } else {
-            setAutoScroll(false);
+        if (
+            !autoScrollRef.current
+        ) {
+            return;
         }
-    }
 
-    function scrollToBottom() {
+        scrollToBottomNow();
+    }, [
+        messageCount,
+        scrollToBottomNow,
+    ]);
+
+    useEffect(() => {
         const element =
             scrollRef.current;
 
@@ -140,22 +177,188 @@ export function useChatAutoScroll({
             return;
         }
 
-        setAutoScroll(true);
-        setNewMessagesCount(0);
+        let frame: number | null =
+            null;
 
-        isProgrammaticScrollRef.current =
-            true;
+        const observer =
+            new MutationObserver(() => {
+                if (
+                    !autoScrollRef.current
+                ) {
+                    return;
+                }
 
-        element.scrollTo({
-            top: element.scrollHeight,
-            behavior: "smooth",
-        });
+                if (
+                    frame !== null
+                ) {
+                    cancelAnimationFrame(
+                        frame
+                    );
+                }
 
-        window.setTimeout(() => {
-            isProgrammaticScrollRef.current =
+                frame =
+                    requestAnimationFrame(
+                        () => {
+                            frame = null;
+
+                            if (
+                                autoScrollRef.current
+                            ) {
+                                scrollToBottomNow();
+                            }
+                        }
+                    );
+            });
+
+        observer.observe(
+            element,
+            {
+                childList: true,
+                subtree: true,
+            }
+        );
+
+        return () => {
+            observer.disconnect();
+
+            if (
+                frame !== null
+            ) {
+                cancelAnimationFrame(
+                    frame
+                );
+            }
+        };
+    }, [
+        scrollToBottomNow,
+    ]);
+
+    useEffect(() => {
+        function handleVisibilityChange() {
+            if (
+                document.visibilityState !==
+                "visible"
+            ) {
+                return;
+            }
+
+            if (
+                !autoScrollRef.current
+            ) {
+                return;
+            }
+
+            requestAnimationFrame(() => {
+                scrollToBottomNow();
+            });
+        }
+
+        document.addEventListener(
+            "visibilitychange",
+            handleVisibilityChange
+        );
+
+        window.addEventListener(
+            "focus",
+            handleVisibilityChange
+        );
+
+        return () => {
+            document.removeEventListener(
+                "visibilitychange",
+                handleVisibilityChange
+            );
+
+            window.removeEventListener(
+                "focus",
+                handleVisibilityChange
+            );
+        };
+    }, [
+        scrollToBottomNow,
+    ]);
+
+    const handleScroll =
+        useCallback(() => {
+            const element =
+                scrollRef.current;
+
+            if (!element) {
+                return;
+            }
+
+            if (
+                programmaticScrollRef.current
+            ) {
+                return;
+            }
+
+            const atBottom =
+                isAtBottom(element);
+
+            if (atBottom) {
+                autoScrollRef.current =
+                    true;
+
+                setAutoScroll(
+                    true
+                );
+
+                setNewMessagesCount(
+                    0
+                );
+
+                return;
+            }
+
+            autoScrollRef.current =
                 false;
-        }, 400);
-    }
+
+            setAutoScroll(
+                false
+            );
+        }, [
+            isAtBottom,
+        ]);
+
+    const scrollToBottom =
+        useCallback(() => {
+            autoScrollRef.current =
+                true;
+
+            setAutoScroll(
+                true
+            );
+
+            setNewMessagesCount(
+                0
+            );
+
+            scrollToBottomNow();
+        }, [
+            scrollToBottomNow,
+        ]);
+
+    useEffect(() => {
+        return () => {
+            if (
+                rafRef.current !==
+                null
+            ) {
+                cancelAnimationFrame(
+                    rafRef.current
+                );
+            }
+
+            if (
+                unlockTimerRef.current
+            ) {
+                clearTimeout(
+                    unlockTimerRef.current
+                );
+            }
+        };
+    }, []);
 
     return {
         scrollRef,

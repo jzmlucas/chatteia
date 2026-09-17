@@ -28,7 +28,11 @@
 "footer": "Sem login para quem só quer ler o chat.",
 "errorInvalidChannel": "Digite um nome de canal ou um link válido.",
 "errorSecondChannel": "Digite também o segundo canal.",
-"errorSameChannels": "Escolha dois canais diferentes."
+"errorSameChannels": "Escolha dois canais diferentes.",
+  "youtubeChannelPlaceholder": "Nome, @handle ou link do YouTube",
+  "errorInvalidYouTubeChannel": "Canal ou link do YouTube inválido.",
+  "errorInvalidSecondYouTubeChannel": "Digite também o segundo canal do YouTube."
+
 },
 "chatStatus": {
 "idle": "Iniciando…",
@@ -52,17 +56,27 @@
 "connectingToChat": "Conectando ao chat…",
 "newMessagesButton": "↓ Novas mensagens"
 },
-"multiChat": {
-"addChannel": "Adicionar canal",
-"platform": "Plataforma",
-"addChannelPlaceholder": "Adicionar canal…",
-"addChannelSubmit": "Adicionar",
-"removeChannelAria": "Remover #{channel}",
-"connectedCount": "{connected}/{total} conectados",
-"searchPlaceholder": "Buscar mensagens…",
-"noChannels": "Nenhum canal adicionado.",
-"waitingMessages": "Aguardando mensagens dos chats…"
-},
+  "multiChat": {
+    "addChannel": "Adicionar canal",
+    "platform": "Plataforma",
+    "addChannelPlaceholder": "Adicionar canal…",
+    "twitchChannelPlaceholder": "Nome ou link da Twitch",
+    "kickChannelPlaceholder": "Nome ou link da KICK",
+    "youtubeChannelPlaceholder": "Nome, @ ou link do YouTube",
+    "addChannelSubmit": "Adicionar",
+    "removeChannelAria": "Remover #{channel}",
+    "connectedCount": "{connected}/{total} conectados",
+    "searchPlaceholder": "Buscar mensagens…",
+    "noChannels": "Nenhum canal adicionado.",
+    "waitingMessages": "Aguardando mensagens dos chats…",
+    "errorInvalidYouTubeInput": "Digite o nome, @handle ou link do YouTube.",
+    "errorAtNotAllowed": "Digite o nome ou link do canal. @ não é aceito nesta plataforma.",
+    "errorInvalidYouTubeChannel": "Canal ou link do YouTube inválido.",
+    "errorInvalidTwitchChannel": "Canal ou link da Twitch inválido.",
+    "errorInvalidKickChannel": "Canal ou link da KICK inválido.",
+    "errorDuplicateChannel": "Este canal já está no Multi-chat.",
+    "errorMaxChannels": "O Multi-chat permite no máximo 4 canais."
+  },
 "obs": {
 "copyLink": "+ OBS",
 "linkCopied": "Link copiado!"

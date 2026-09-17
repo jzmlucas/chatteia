@@ -28,7 +28,10 @@
 "footer": "Вход не требуется, если вы хотите только читать чат.",
 "errorInvalidChannel": "Введите название канала или действительную ссылку.",
 "errorSecondChannel": "Введите также второй канал.",
-"errorSameChannels": "Выберите два разных канала."
+"errorSameChannels": "Выберите два разных канала.",
+  "youtubeChannelPlaceholder": "Имя, @handle или ссылка на YouTube",
+  "errorInvalidYouTubeChannel": "Недопустимый канал или ссылка на YouTube.",
+  "errorInvalidSecondYouTubeChannel": "Введите также второй канал YouTube."
 },
 "chatStatus": {
 "idle": "Запуск…",
@@ -52,17 +55,27 @@
 "connectingToChat": "Подключение к чату…",
 "newMessagesButton": "↓ Новые сообщения"
 },
-"multiChat": {
-"addChannel": "Добавить канал",
-"platform": "Платформа",
-"addChannelPlaceholder": "Добавить канал…",
-"addChannelSubmit": "Добавить",
-"removeChannelAria": "Удалить #{channel}",
-"connectedCount": "{connected}/{total} подключено",
-"searchPlaceholder": "Поиск сообщений…",
-"noChannels": "Каналы не добавлены.",
-"waitingMessages": "Ожидание сообщений из чатов…"
-},
+  "multiChat": {
+    "addChannel": "Добавить канал",
+    "platform": "Платформа",
+    "addChannelPlaceholder": "Добавить канал…",
+    "twitchChannelPlaceholder": "Имя или ссылка на Twitch",
+    "kickChannelPlaceholder": "Имя или ссылка на KICK",
+    "youtubeChannelPlaceholder": "Имя, @handle или ссылка на YouTube",
+    "addChannelSubmit": "Добавить",
+    "removeChannelAria": "Удалить #{channel}",
+    "connectedCount": "{connected}/{total} подключено",
+    "searchPlaceholder": "Поиск сообщений…",
+    "noChannels": "Каналы не добавлены.",
+    "waitingMessages": "Ожидание сообщений из чатов…",
+    "errorInvalidYouTubeInput": "Введите имя, @handle или ссылку на YouTube.",
+    "errorAtNotAllowed": "Введите имя или ссылку на канал. Символ @ не поддерживается для этой платформы.",
+    "errorInvalidYouTubeChannel": "Недопустимый канал или ссылка на YouTube.",
+    "errorInvalidTwitchChannel": "Недопустимый канал или ссылка на Twitch.",
+    "errorInvalidKickChannel": "Недопустимый канал или ссылка на KICK.",
+    "errorDuplicateChannel": "Этот канал уже добавлен в Multi-chat.",
+    "errorMaxChannels": "В Multi-chat можно добавить не более 4 каналов."
+  },
 "obs": {
 "copyLink": "+ OBS",
 "linkCopied": "Ссылка скопирована!"

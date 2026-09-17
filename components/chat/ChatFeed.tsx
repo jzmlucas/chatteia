@@ -9,6 +9,10 @@ import {
     type FeedMessage,
 } from "./ChatMessage";
 
+import {
+    ChatNewMessagesButton,
+} from "./ChatNewMessagesButton";
+
 export type { FeedMessage };
 
 export function ChatFeed({
@@ -24,9 +28,12 @@ export function ChatFeed({
 }) {
     const {
         scrollRef,
+        newMessagesCount,
         handleScroll,
+        scrollToBottom,
     } = useChatAutoScroll({
-        messageCount: messages.length,
+        messageCount:
+        messages.length,
     });
 
     return (
@@ -49,15 +56,21 @@ export function ChatFeed({
                 {messages.length === 0 &&
                     emptyLabel && (
                         <p className="text-sm text-zinc-500">
-                            {emptyLabel}
+                            {
+                                emptyLabel
+                            }
                         </p>
                     )}
 
                 {messages.map(
-                    (message) => (
+                    (
+                        message
+                    ) => (
                         <ChatMessage
                             key={`${message.platform}-${message.channel}-${message.id}`}
-                            message={message}
+                            message={
+                                message
+                            }
                             showChannelTag={
                                 showChannelTag
                             }
@@ -65,6 +78,15 @@ export function ChatFeed({
                     )
                 )}
             </div>
+
+            <ChatNewMessagesButton
+                count={
+                    newMessagesCount
+                }
+                onClick={
+                    scrollToBottom
+                }
+            />
         </div>
     );
 }

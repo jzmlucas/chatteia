@@ -65,12 +65,25 @@ function normalizeChannels(
 export function useTwitchConnectionManager(
     channels: string[]
 ) {
+    const channelKey = channels
+        .map((channel) =>
+            channel
+                .trim()
+                .replace(/^#/, "")
+                .toLowerCase()
+        )
+        .filter(Boolean)
+        .join("|");
+
     const normalizedChannels = useMemo(
-        () => normalizeChannels(channels),
-        [channels.join("|")]
+        () =>
+            normalizeChannels(
+                channels
+            ),
+        [channelKey]
     );
 
-    const channelKey =
+    const normalizedChannelKey =
         normalizedChannels.join("|");
 
     const clientsRef = useRef<
@@ -97,14 +110,35 @@ export function useTwitchConnectionManager(
         Record<string, boolean>
     >({});
 
+    const mountedRef =
+        useRef(false);
+
     const [
         connections,
         setConnections,
     ] = useState<ConnectionRegistry>({});
 
     useEffect(() => {
-        let disposed = false;
+        mountedRef.current = true;
 
+        return () => {
+            mountedRef.current = false;
+
+            const clients =
+                Object.values(
+                    clientsRef.current
+                );
+
+            clientsRef.current = {};
+            clientTokensRef.current = {};
+
+            for (const client of clients) {
+                client.disconnect();
+            }
+        };
+    }, []);
+
+    useEffect(() => {
         async function loadChannelData(
             channel: string,
             channelId: string,
@@ -127,14 +161,16 @@ export function useTwitchConnectionManager(
                     badgeMap,
                     externalEmotes,
                 ] = await Promise.all([
-                    fetchBadgeMap(channelId),
+                    fetchBadgeMap(
+                        channelId
+                    ),
                     fetchTwitchExternalEmoteMap(
                         channelId
                     ),
                 ]);
 
                 if (
-                    disposed ||
+                    !mountedRef.current ||
                     clientTokensRef.current[
                         channel
                         ] !== token
@@ -171,7 +207,9 @@ export function useTwitchConnectionManager(
                         const connection =
                             current[channel];
 
-                        if (!connection) {
+                        if (
+                            !connection
+                        ) {
                             return current;
                         }
 
@@ -187,7 +225,7 @@ export function useTwitchConnectionManager(
                 );
             } catch (error) {
                 if (
-                    !disposed &&
+                    mountedRef.current &&
                     clientTokensRef.current[
                         channel
                         ] === token
@@ -210,21 +248,30 @@ export function useTwitchConnectionManager(
         }
 
         const activeChannels =
-            new Set(normalizedChannels);
+            new Set(
+                normalizedChannels
+            );
 
         for (const channel of Object.keys(
             clientsRef.current
         )) {
             if (
-                activeChannels.has(channel)
+                activeChannels.has(
+                    channel
+                )
             ) {
                 continue;
             }
 
             const client =
-                clientsRef.current[channel];
+                clientsRef.current[
+                    channel
+                    ];
 
-            delete clientsRef.current[channel];
+            delete clientsRef.current[
+                channel
+                ];
+
             delete clientTokensRef.current[
                 channel
                 ];
@@ -267,7 +314,9 @@ export function useTwitchConnectionManager(
 
         for (const channel of normalizedChannels) {
             if (
-                clientsRef.current[channel]
+                clientsRef.current[
+                    channel
+                    ]
             ) {
                 continue;
             }
@@ -291,7 +340,8 @@ export function useTwitchConnectionManager(
                         channel,
                         messages:
                             current[channel]
-                                ?.messages ?? [],
+                                ?.messages ??
+                            [],
                         status:
                             current[channel]
                                 ?.status ??
@@ -311,7 +361,7 @@ export function useTwitchConnectionManager(
                             twitchMessage
                         ) => {
                             if (
-                                disposed ||
+                                !mountedRef.current ||
                                 clientTokensRef.current[
                                     channel
                                     ] !== token
@@ -327,7 +377,9 @@ export function useTwitchConnectionManager(
 
                             if (
                                 rawMessages.some(
-                                    (message) =>
+                                    (
+                                        message
+                                    ) =>
                                         message.id ===
                                         twitchMessage.id
                                 )
@@ -423,7 +475,7 @@ export function useTwitchConnectionManager(
                             detail
                         ) => {
                             if (
-                                disposed ||
+                                !mountedRef.current ||
                                 clientTokensRef.current[
                                     channel
                                     ] !== token
@@ -474,27 +526,7 @@ export function useTwitchConnectionManager(
 
             client.connect();
         }
-
-        return () => {
-            disposed = true;
-        };
-    }, [channelKey]);
-
-    useEffect(() => {
-        return () => {
-            const clients =
-                Object.values(
-                    clientsRef.current
-                );
-
-            clientsRef.current = {};
-            clientTokensRef.current = {};
-
-            for (const client of clients) {
-                client.disconnect();
-            }
-        };
-    }, []);
+    }, [normalizedChannelKey]);
 
     const visibleConnections =
         useMemo(() => {

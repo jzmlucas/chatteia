@@ -28,7 +28,10 @@
 "footer": "No login required for those who just want to read the chat.",
 "errorInvalidChannel": "Enter a channel name or a valid link.",
 "errorSecondChannel": "Enter the second channel as well.",
-"errorSameChannels": "Choose two different channels."
+"errorSameChannels": "Choose two different channels.",
+  "youtubeChannelPlaceholder": "YouTube name, @handle or link",
+  "errorInvalidYouTubeChannel": "Invalid YouTube channel or link.",
+  "errorInvalidSecondYouTubeChannel": "Enter the second YouTube channel as well."
 },
 "chatStatus": {
 "idle": "Starting…",
@@ -52,17 +55,27 @@
 "connectingToChat": "Connecting to chat…",
 "newMessagesButton": "↓ New messages"
 },
-"multiChat": {
-"addChannel": "Add channel",
-"platform": "Platform",
-"addChannelPlaceholder": "Add channel…",
-"addChannelSubmit": "Add",
-"removeChannelAria": "Remove #{channel}",
-"connectedCount": "{connected}/{total} connected",
-"searchPlaceholder": "Search messages…",
-"noChannels": "No channels added.",
-"waitingMessages": "Waiting for chat messages…"
-},
+  "multiChat": {
+    "addChannel": "Add channel",
+    "platform": "Platform",
+    "addChannelPlaceholder": "Add channel…",
+    "twitchChannelPlaceholder": "Twitch name or link",
+    "kickChannelPlaceholder": "KICK name or link",
+    "youtubeChannelPlaceholder": "YouTube name, @handle or link",
+    "addChannelSubmit": "Add",
+    "removeChannelAria": "Remove #{channel}",
+    "connectedCount": "{connected}/{total} connected",
+    "searchPlaceholder": "Search messages…",
+    "noChannels": "No channels added.",
+    "waitingMessages": "Waiting for chat messages…",
+    "errorInvalidYouTubeInput": "Enter the YouTube name, @handle or link.",
+    "errorAtNotAllowed": "Enter the channel name or link. @ is not accepted on this platform.",
+    "errorInvalidYouTubeChannel": "Invalid YouTube channel or link.",
+    "errorInvalidTwitchChannel": "Invalid Twitch channel or link.",
+    "errorInvalidKickChannel": "Invalid KICK channel or link.",
+    "errorDuplicateChannel": "This channel is already in Multi-chat.",
+    "errorMaxChannels": "Multi-chat allows a maximum of 4 channels."
+  },
 "obs": {
 "copyLink": "+ OBS",
 "linkCopied": "Link copied!"
