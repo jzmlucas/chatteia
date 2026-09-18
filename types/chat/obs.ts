@@ -65,7 +65,7 @@ export const DEFAULT_OBS_CHAT_SETTINGS: ObsChatSettings = {
     showTimestamp: false,
     showUsername: true,
 
-    usernameColor: "#9147ff",
+    usernameColor: "#F55376",
     messageColor: "#ffffff",
 
     messageBackground: true,

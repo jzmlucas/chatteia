@@ -114,10 +114,10 @@ export function ChatMessage({
                     "
                     style={{
                         backgroundColor:
-                            `${message.channelColor ?? "#9146FF"}22`,
+                            `${message.channelColor ?? "#F55376"}22`,
                         color:
                             message.channelColor ??
-                            "#9146FF",
+                            "#F55376",
                     }}
                 >
                     {message.channelLabel ??

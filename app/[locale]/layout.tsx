@@ -4,6 +4,8 @@ import { getMessages, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import "../globals.css";
 import { locales, isAppLocale, type AppLocale } from "@/i18n/config";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { GlobalHeader } from "@/components/layout/GlobalHeader";
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -55,7 +57,10 @@ export default async function LocaleLayout({
       <html lang={locale}>
       <body className="bg-twitch-dark text-zinc-100 min-h-screen">
       <NextIntlClientProvider locale={locale} messages={messages}>
-        {children}
+        <AuthProvider>
+          <GlobalHeader />
+          {children}
+        </AuthProvider>
       </NextIntlClientProvider>
       </body>
       </html>

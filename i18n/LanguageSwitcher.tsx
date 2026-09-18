@@ -177,9 +177,9 @@ export function LanguageSwitcher() {
                     outline-none
                     transition-colors
                     hover:border-zinc-500
-                    focus-visible:border-twitch-purple
+                    focus-visible:border-[#F55376]
                     focus-visible:ring-2
-                    focus-visible:ring-twitch-purple
+                    focus-visible:ring-[#F55376]
                     focus-visible:ring-offset-2
                     focus-visible:ring-offset-black
                     sm:py-2

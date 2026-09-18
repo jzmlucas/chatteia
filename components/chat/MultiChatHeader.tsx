@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 
 import { CopyObsLinkButton } from "@/components/chat/CopyObsLinkButton";
+import { ProfileMenu } from "@/components/layout/ProfileMenu";
 
 import {
     targetKey,
@@ -245,12 +246,12 @@ export function MultiChatHeader({
                                 aria-label={
                                     channelPlaceholder
                                 }
-                                className="w-52 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-twitch-purple sm:w-64"
+                                className="w-52 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-[#F55376] sm:w-64"
                             />
 
                             <button
                                 type="submit"
-                                className="rounded-md bg-twitch-purple px-3 py-1.5 text-sm font-medium transition-colors hover:bg-purple-600"
+                                className="rounded-md bg-[#F55376] px-3 py-1.5 text-sm font-medium transition-colors hover:bg-[#e33361]"
                             >
                                 {t(
                                     "addChannelSubmit"
@@ -318,8 +319,10 @@ export function MultiChatHeader({
                         aria-label={t(
                             "searchPlaceholder"
                         )}
-                        className="w-40 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-twitch-purple sm:w-56"
+                        className="w-40 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-[#F55376] sm:w-56"
                     />
+
+                    <ProfileMenu />
                 </div>
             </div>
         </header>

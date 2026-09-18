@@ -645,7 +645,7 @@ function Toggle({
                 className={[
                     "relative h-5 w-9 shrink-0 transition",
                     checked
-                        ? "bg-purple-500"
+                        ? "bg-[#F55376]"
                         : "bg-white/10",
                 ].join(" ")}
             >
@@ -686,7 +686,7 @@ function DirectionButton({
             className={[
                 "h-9 text-sm transition",
                 active
-                    ? "bg-purple-500/10 text-purple-400"
+                    ? "bg-[#F55376]/10 text-[#f76f9c]"
                     : "bg-white/[0.02] text-white/40 hover:bg-white/[0.05] hover:text-white",
             ].join(" ")}
         >
@@ -715,7 +715,7 @@ function SpeedButton({
             className={[
                 "h-9 text-[11px] transition",
                 active
-                    ? "bg-purple-500/10 text-purple-400"
+                    ? "bg-[#F55376]/10 text-[#f76f9c]"
                     : "bg-white/[0.02] text-white/40 hover:bg-white/[0.05] hover:text-white",
             ].join(" ")}
         >

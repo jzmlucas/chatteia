@@ -43,7 +43,7 @@ export function LanguageSwitcher() {
     aria-label={t("srLabel")}
     aria-haspopup="listbox"
     aria-expanded={open}
-    className="flex items-center gap-1.5 rounded-lg border border-twitch-border bg-twitch-panel px-3 py-2 text-sm text-zinc-200 transition-colors hover:border-twitch-purple"
+    className="flex items-center gap-1.5 rounded-lg border border-twitch-border bg-twitch-panel px-3 py-2 text-sm text-zinc-200 transition-colors hover:border-[#F55376]"
     >
     <span aria-hidden="true">{localeFlags[currentLocale]}</span>
         <span className="hidden sm:inline">{localeLabels[currentLocale]}</span>
@@ -64,7 +64,7 @@ export function LanguageSwitcher() {
         onClick={() => handleSelect(locale)}
         className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-twitch-dark ${
             locale === currentLocale
-                ? "text-twitch-purple font-semibold"
+                ? "text-[#F55376] font-semibold"
                 : "text-zinc-200"
         }`}
     >

@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { ProfileMenu } from "@/components/layout/ProfileMenu";
 import {
     Link,
     useRouter,
@@ -383,6 +384,7 @@ export default function TikTokChatPage() {
                             </button>
                         </form>
 
+                        <ProfileMenu />
                     </div>
                 </div>
             </header>

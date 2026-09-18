@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { ProfileMenu } from "@/components/layout/ProfileMenu";
 import {
   Link,
   useRouter,
@@ -382,6 +383,7 @@ export default function YouTubeChatPage() {
               </button>
             </form>
 
+            <ProfileMenu />
           </div>
         </div>
       </header>

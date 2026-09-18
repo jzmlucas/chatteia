@@ -1,6 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+
+import { ProfileMenu } from "@/components/layout/ProfileMenu";
 import {
     Link,
     useRouter,
@@ -373,12 +375,12 @@ export default function ChatPage() {
                                 placeholder={t(
                                     "addChannelPlaceholder"
                                 )}
-                                className="w-36 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-twitch-purple sm:w-48"
+                                className="w-36 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-[#9146FF] sm:w-48"
                             />
 
                             <button
                                 type="submit"
-                                className="rounded-md bg-twitch-purple px-3 py-1.5 text-sm font-medium transition-colors hover:bg-purple-600"
+                                className="rounded-md bg-[#9146FF] px-3 py-1.5 text-sm font-medium transition-colors hover:bg-[#a970ff]"
                             >
                                 {t(
                                     "addChannelSubmit"
@@ -435,7 +437,7 @@ export default function ChatPage() {
                             placeholder={t(
                                 "searchPlaceholder"
                             )}
-                            className="w-40 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-twitch-purple sm:w-56"
+                            className="w-40 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-[#9146FF] sm:w-56"
                         />
 
                         <form
@@ -459,18 +461,20 @@ export default function ChatPage() {
                                 placeholder={t(
                                     "switchChannelPlaceholder"
                                 )}
-                                className="w-36 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-twitch-purple sm:w-48"
+                                className="w-36 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-[#9146FF] sm:w-48"
                             />
 
                             <button
                                 type="submit"
-                                className="rounded-md bg-twitch-purple px-3 py-1.5 text-sm font-medium transition-colors hover:bg-purple-600"
+                                className="rounded-md bg-[#9146FF] px-3 py-1.5 text-sm font-medium transition-colors hover:bg-[#a970ff]"
                             >
                                 {t(
                                     "switchChannelSubmit"
                                 )}
                             </button>
                         </form>
+
+                        <ProfileMenu />
                     </div>
                 </div>
             </header>

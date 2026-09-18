@@ -23,8 +23,8 @@ export function ChatNewMessagesButton({
                 -translate-x-1/2
                 rounded-full
                 border
-                border-purple-400/30
-                bg-twitch-purple
+                border-[#f76f9c]/30
+                bg-[#F55376]
                 px-4
                 py-2
                 text-sm
@@ -32,10 +32,10 @@ export function ChatNewMessagesButton({
                 text-white
                 shadow-lg
                 transition
-                hover:bg-purple-600
+                hover:bg-[#e33361]
                 focus:outline-none
                 focus:ring-2
-                focus:ring-purple-400
+                focus:ring-[#f76f9c]
             "
         >
             +{" "}

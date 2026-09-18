@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 
 import { HomeChatForm } from "@/components/home/HomeChatForm";
-import { SettingsMenu } from "@/components/home/SettingsMenu";
 
 import { useHomeForm } from "@/hooks/home/useHomeForm";
 
@@ -72,8 +71,6 @@ export default function HomePage() {
                     </section>
                 </div>
             </main>
-
-            <SettingsMenu />
         </>
     );
 }
