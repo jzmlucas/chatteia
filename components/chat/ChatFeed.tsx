@@ -1,7 +1,6 @@
 "use client";
 
 import {
-    useCallback,
     useEffect,
     useRef,
     useState,
@@ -10,6 +9,10 @@ import {
 import {
     useChatAutoScroll,
 } from "@/hooks/chat/useChatAutoScroll";
+
+import {
+    useChatActivity,
+} from "@/hooks/chat/useChatActivity";
 
 import {
     ChatMessage,
@@ -26,6 +29,10 @@ import type {
 
 export type { FeedMessage };
 
+type ChatActivity = ReturnType<
+    typeof useChatActivity
+>;
+
 type ObsAnimatedMessage = {
     id: string;
     message: FeedMessage;
@@ -40,18 +47,23 @@ const MOVEMENT_SPEEDS = {
 } as const;
 
 export function ChatFeed({
-    messages,
-    emptyLabel = "Aguardando mensagens do chat…",
-    showChannelTag = false,
-    variant = "default",
-    obsSettings,
-}: {
+                             messages,
+                             emptyLabel = "Aguardando mensagens do chat…",
+                             showChannelTag = false,
+                             variant = "default",
+                             obsSettings,
+                         }: {
     messages: FeedMessage[];
     emptyLabel?: string;
     showChannelTag?: boolean;
     variant?: "default" | "obs";
     obsSettings?: ObsChatSettings;
 }) {
+    const activity =
+        useChatActivity(
+            messages
+        );
+
     if (variant === "obs") {
         return (
             <ObsChatFeed
@@ -61,6 +73,9 @@ export function ChatFeed({
                 }
                 obsSettings={
                     obsSettings!
+                }
+                activity={
+                    activity
                 }
             />
         );
@@ -73,24 +88,23 @@ export function ChatFeed({
             showChannelTag={
                 showChannelTag
             }
+            activity={
+                activity
+            }
         />
     );
 }
 
-/*
- * ============================================================================
- * CHAT NORMAL
- * ============================================================================
- */
-
 function DefaultChatFeed({
-    messages,
-    emptyLabel,
-    showChannelTag,
-}: {
+                             messages,
+                             emptyLabel,
+                             showChannelTag,
+                             activity,
+                         }: {
     messages: FeedMessage[];
     emptyLabel: string;
     showChannelTag: boolean;
+    activity: ChatActivity;
 }) {
     const {
         scrollRef,
@@ -99,7 +113,7 @@ function DefaultChatFeed({
         scrollToBottom,
     } = useChatAutoScroll({
         messageCount:
-            messages.length,
+        messages.length,
     });
 
     return (
@@ -130,6 +144,11 @@ function DefaultChatFeed({
                             showChannelTag={
                                 showChannelTag
                             }
+                            activity={
+                                activity.getActivity(
+                                    message
+                                )
+                            }
                         />
                     )
                 )}
@@ -147,20 +166,16 @@ function DefaultChatFeed({
     );
 }
 
-/*
- * ============================================================================
- * CHAT OBS
- * ============================================================================
- */
-
 function ObsChatFeed({
-    messages,
-    showChannelTag,
-    obsSettings,
-}: {
+                         messages,
+                         showChannelTag,
+                         obsSettings,
+                         activity,
+                     }: {
     messages: FeedMessage[];
     showChannelTag: boolean;
     obsSettings: ObsChatSettings;
+    activity: ChatActivity;
 }) {
     const containerRef =
         useRef<HTMLDivElement | null>(
@@ -177,11 +192,13 @@ function ObsChatFeed({
             new Set()
         );
 
-    const [containerSize, setContainerSize] =
-        useState({
-            width: 0,
-            height: 0,
-        });
+    const [
+        containerSize,
+        setContainerSize,
+    ] = useState({
+        width: 0,
+        height: 0,
+    });
 
     const [
         animatedMessages,
@@ -189,12 +206,6 @@ function ObsChatFeed({
     ] = useState<
         ObsAnimatedMessage[]
     >([]);
-
-    /*
-     * ----------------------------------------------------------------------
-     * MEDIR CONTAINER
-     * ----------------------------------------------------------------------
-     */
 
     useEffect(() => {
         const element =
@@ -207,9 +218,9 @@ function ObsChatFeed({
         const updateSize = () => {
             setContainerSize({
                 width:
-                    element.clientWidth,
+                element.clientWidth,
                 height:
-                    element.clientHeight,
+                element.clientHeight,
             });
         };
 
@@ -226,12 +237,6 @@ function ObsChatFeed({
             observer.disconnect();
         };
     }, []);
-
-    /*
-     * ----------------------------------------------------------------------
-     * QUANDO MOVIMENTO ESTÁ DESLIGADO
-     * ----------------------------------------------------------------------
-     */
 
     useEffect(() => {
         if (obsSettings.autoScroll) {
@@ -267,9 +272,9 @@ function ObsChatFeed({
                         (visible.length -
                             1 -
                             index) *
-                            (obsSettings.fontSize +
-                                obsSettings.messageSpacing +
-                                20),
+                        (obsSettings.fontSize +
+                            obsSettings.messageSpacing +
+                            20),
                 })
             )
         );
@@ -288,12 +293,6 @@ function ObsChatFeed({
         containerSize.height,
         messages,
     ]);
-
-    /*
-     * ----------------------------------------------------------------------
-     * DETECTAR NOVAS MENSAGENS
-     * ----------------------------------------------------------------------
-     */
 
     useEffect(() => {
         if (!obsSettings.autoScroll) {
@@ -343,7 +342,8 @@ function ObsChatFeed({
                     ...current,
                 ];
 
-                for (const message of newMessages) {
+                for (const message of
+                    newMessages) {
                     next.push(
                         createObsMessage(
                             message,
@@ -353,10 +353,6 @@ function ObsChatFeed({
                     );
                 }
 
-                /*
-                 * Mantém somente a quantidade
-                 * configurada pelo usuário.
-                 */
                 return next.slice(
                     -Math.max(
                         obsSettings.maxMessages,
@@ -373,12 +369,6 @@ function ObsChatFeed({
         containerSize,
     ]);
 
-    /*
-     * ----------------------------------------------------------------------
-     * ANIMAÇÃO
-     * ----------------------------------------------------------------------
-     */
-
     useEffect(() => {
         if (!obsSettings.autoScroll) {
             return;
@@ -394,10 +384,11 @@ function ObsChatFeed({
         const speed =
             MOVEMENT_SPEEDS[
                 obsSettings.animationSpeed
-            ];
+                ];
 
-        let lastTime: number | null =
-            null;
+        let lastTime:
+            | number
+            | null = null;
 
         const animate = (
             timestamp: number
@@ -410,7 +401,7 @@ function ObsChatFeed({
             const delta =
                 Math.min(
                     timestamp -
-                        lastTime,
+                    lastTime,
                     50
                 );
 
@@ -485,12 +476,6 @@ function ObsChatFeed({
         containerSize,
     ]);
 
-    /*
-     * ----------------------------------------------------------------------
-     * RESET AO TROCAR DIREÇÃO
-     * ----------------------------------------------------------------------
-     */
-
     useEffect(() => {
         if (!obsSettings.autoScroll) {
             return;
@@ -505,25 +490,19 @@ function ObsChatFeed({
         obsSettings.animationSpeed,
     ]);
 
-    /*
-     * ----------------------------------------------------------------------
-     * RENDER
-     * ----------------------------------------------------------------------
-     */
-
     return (
         <div
             ref={containerRef}
             className="relative h-full w-full overflow-hidden bg-transparent"
             style={{
                 fontFamily:
-                    obsSettings.fontFamily,
+                obsSettings.fontFamily,
 
                 fontSize:
                     `${obsSettings.fontSize}px`,
 
                 fontWeight:
-                    obsSettings.fontWeight,
+                obsSettings.fontWeight,
 
                 backgroundColor:
                     "transparent",
@@ -536,10 +515,10 @@ function ObsChatFeed({
                         className="absolute max-w-[90%] break-words"
                         style={{
                             left:
-                                item.x,
+                            item.x,
 
                             top:
-                                item.y,
+                            item.y,
 
                             willChange:
                                 "transform",
@@ -561,6 +540,11 @@ function ObsChatFeed({
                             obsSettings={
                                 obsSettings
                             }
+                            activity={
+                                activity.getActivity(
+                                    item.message
+                                )
+                            }
                         />
                     </div>
                 )
@@ -568,12 +552,6 @@ function ObsChatFeed({
         </div>
     );
 }
-
-/*
- * ============================================================================
- * MESSAGE KEY
- * ============================================================================
- */
 
 function getMessageKey(
     message: FeedMessage
@@ -584,12 +562,6 @@ function getMessageKey(
         message.id,
     ].join("-");
 }
-
-/*
- * ============================================================================
- * CREATE OBS MESSAGE
- * ============================================================================
- */
 
 function createObsMessage(
     message: FeedMessage,
@@ -604,7 +576,7 @@ function createObsMessage(
 
     switch (
         settings.animationDirection
-    ) {
+        ) {
         case "up":
             return {
                 id,
@@ -651,12 +623,6 @@ function createObsMessage(
     }
 }
 
-/*
- * ============================================================================
- * HORIZONTAL LANE
- * ============================================================================
- */
-
 function getHorizontalLane(
     height: number,
     settings: ObsChatSettings
@@ -671,12 +637,12 @@ function getHorizontalLane(
         Math.max(
             Math.floor(
                 availableHeight /
-                    Math.max(
-                        settings.fontSize +
-                            settings.messageSpacing +
-                            20,
-                        30
-                    )
+                Math.max(
+                    settings.fontSize +
+                    settings.messageSpacing +
+                    20,
+                    30
+                )
             ),
             1
         );
@@ -684,26 +650,20 @@ function getHorizontalLane(
     const lane =
         Math.floor(
             Math.random() *
-                lanes
+            lanes
         );
 
     return (
         16 +
         lane *
-            Math.max(
-                settings.fontSize +
-                    settings.messageSpacing +
-                    20,
-                30
-            )
+        Math.max(
+            settings.fontSize +
+            settings.messageSpacing +
+            20,
+            30
+        )
     );
 }
-
-/*
- * ============================================================================
- * MOVE
- * ============================================================================
- */
 
 function moveObsMessage(
     item: ObsAnimatedMessage,
@@ -745,12 +705,6 @@ function moveObsMessage(
     }
 }
 
-/*
- * ============================================================================
- * OUTSIDE
- * ============================================================================
- */
-
 function isObsMessageOutside(
     item: ObsAnimatedMessage,
     direction: ObsChatSettings["animationDirection"],
@@ -767,7 +721,7 @@ function isObsMessageOutside(
             return (
                 item.y >
                 size.height +
-                    300
+                300
             );
 
         case "left":
@@ -777,28 +731,22 @@ function isObsMessageOutside(
             return (
                 item.x >
                 size.width +
-                    800
+                800
             );
     }
 }
 
-/*
- * ============================================================================
- * UNIQUE ID
- * ============================================================================
- */
-
 function createUniqueId(): string {
     if (
         typeof crypto !==
-            "undefined" &&
+        "undefined" &&
         typeof crypto.randomUUID ===
-            "function"
+        "function"
     ) {
         return crypto.randomUUID();
     }
 
     return `${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2)}`;
+        .toString(36)
+        .slice(2)}`;
 }
