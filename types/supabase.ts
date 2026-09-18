@@ -20,15 +20,14 @@ export type ProfileInsert = {
     bio?: string | null;
 };
 
-export type ProfileUpdate = Partial<
-    Omit<ProfileInsert, "id">
->;
+export type ProfileUpdate = {
+    username?: string;
+    display_name?: string | null;
+    account_type?: AccountType;
+    avatar_url?: string | null;
+    bio?: string | null;
+};
 
-/**
- * Tipagem mínima do banco (apenas a tabela `profiles`, usada pelo
- * sistema de cadastro/login). Se quiser tipagem completa, gere com:
- * `npx supabase gen types typescript --project-id ibkuzpvthrmclkhruwyf`
- */
 export type Database = {
     public: {
         Tables: {

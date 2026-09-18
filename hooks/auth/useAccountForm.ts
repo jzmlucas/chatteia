@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
+import type { Database } from "@/types/supabase";
+
 export function useAccountForm() {
     const t = useTranslations("auth");
 
@@ -30,9 +32,17 @@ export function useAccountForm() {
 
     useEffect(() => {
         if (profile) {
-            setDisplayName(profile.display_name ?? "");
-            setBio(profile.bio ?? "");
-            setAvatarUrl(profile.avatar_url ?? "");
+            setDisplayName(
+                profile.display_name ?? ""
+            );
+
+            setBio(
+                profile.bio ?? ""
+            );
+
+            setAvatarUrl(
+                profile.avatar_url ?? ""
+            );
         }
     }, [profile]);
 
@@ -49,14 +59,22 @@ export function useAccountForm() {
         setSuccess(false);
         setSaving(true);
 
-        const { error: updateError } = await supabaseBrowser
-            .from("profiles")
-            .update({
-                display_name: displayName.trim() || null,
-                bio: bio.trim() || null,
-                avatar_url: avatarUrl.trim() || null,
-            })
-            .eq("id", user.id);
+        const updateData: Database["public"]["Tables"]["profiles"]["Update"] = {
+            display_name:
+                displayName.trim() || null,
+
+            bio:
+                bio.trim() || null,
+
+            avatar_url:
+                avatarUrl.trim() || null,
+        };
+
+        const { error: updateError } =
+            await supabaseBrowser
+                .from("profiles")
+                .update(updateData)
+                .eq("id", user.id);
 
         setSaving(false);
 

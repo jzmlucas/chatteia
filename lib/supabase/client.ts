@@ -15,12 +15,6 @@ if (!supabaseAnonKey) {
     throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY não configurado.");
 }
 
-/**
- * Cliente Supabase para o browser (login, cadastro, sessão do usuário).
- * A sessão fica persistida em localStorage e é renovada automaticamente.
- *
- * Use este client dentro de componentes "use client".
- */
 export const supabaseBrowser = createClient<Database>(
     supabaseUrl,
     supabaseAnonKey,
