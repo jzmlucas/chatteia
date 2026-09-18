@@ -35,7 +35,24 @@ export type Database = {
                 Row: Profile;
                 Insert: ProfileInsert;
                 Update: ProfileUpdate;
+                Relationships: [];
             };
+        };
+
+        Views: {
+            [_ in never]: never;
+        };
+
+        Functions: {
+            [_ in never]: never;
+        };
+
+        Enums: {
+            account_type: AccountType;
+        };
+
+        CompositeTypes: {
+            [_ in never]: never;
         };
     };
 };

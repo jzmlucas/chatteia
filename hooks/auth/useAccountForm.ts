@@ -80,7 +80,6 @@ export function useAccountForm() {
 
         if (updateError) {
             setError(updateError.message);
-
             return;
         }
 
@@ -92,14 +91,19 @@ export function useAccountForm() {
     return {
         displayName,
         setDisplayName,
+
         bio,
         setBio,
+
         avatarUrl,
         setAvatarUrl,
+
         error,
         success,
         saving,
+
         handleSubmit,
+
         t,
     };
 }
