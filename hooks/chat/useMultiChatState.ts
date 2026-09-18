@@ -261,6 +261,9 @@ export function useMultiChatState() {
             const all: FeedMessage[] =
                 [];
 
+            const seenTwitchMessages =
+                new Set<string>();
+
             targets.forEach(
                 (
                     target,
@@ -288,9 +291,31 @@ export function useMultiChatState() {
                     const label =
                         `${platformLabel} · ${target.channel}`;
 
-                    for (const message of
+                    for (
+                        const message of
                     connection?.messages ??
-                    []) {
+                    []
+                        ) {
+                        if (
+                            message.platform ===
+                            "twitch"
+                        ) {
+                            const twitchKey =
+                                `twitch:${message.id}`;
+
+                            if (
+                                seenTwitchMessages.has(
+                                    twitchKey
+                                )
+                            ) {
+                                continue;
+                            }
+
+                            seenTwitchMessages.add(
+                                twitchKey
+                            );
+                        }
+
                         if (filter) {
                             const search =
                                 filter

@@ -62,6 +62,29 @@ function normalizeChannels(
     );
 }
 
+function deduplicateMessages(
+    messages: UnifiedChatMessage[]
+): UnifiedChatMessage[] {
+    const seen = new Set<string>();
+    const result: UnifiedChatMessage[] = [];
+
+    for (const message of messages) {
+        const key =
+            message.platform === "twitch"
+                ? `twitch:${message.id}`
+                : `${message.platform}:${message.channel}:${message.id}`;
+
+        if (seen.has(key)) {
+            continue;
+        }
+
+        seen.add(key);
+        result.push(message);
+    }
+
+    return result;
+}
+
 export function useTwitchConnectionManager(
     channels: string[]
 ) {
@@ -549,19 +572,23 @@ export function useTwitchConnectionManager(
         ]);
 
     const messages = useMemo(
-        () =>
-            normalizedChannels
-                .flatMap(
+        () => {
+            const combined =
+                normalizedChannels.flatMap(
                     (channel) =>
                         visibleConnections[
                             channel
                             ]?.messages ?? []
-                )
-                .sort(
-                    (a, b) =>
-                        a.timestamp -
-                        b.timestamp
-                ),
+                );
+
+            return deduplicateMessages(
+                combined
+            ).sort(
+                (a, b) =>
+                    a.timestamp -
+                    b.timestamp
+            );
+        },
         [
             normalizedChannels,
             visibleConnections,

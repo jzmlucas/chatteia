@@ -150,12 +150,10 @@ function normalizeTwitchEmotes(
         emotes.push({
             id: externalEmote.id,
             name: externalEmote.name,
-            imageUrl:
-            externalEmote.imageUrl,
+            imageUrl: externalEmote.imageUrl,
             start,
             end,
-            provider:
-            externalEmote.provider,
+            provider: externalEmote.provider,
         });
     }
 

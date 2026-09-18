@@ -11,6 +11,7 @@ export type TwitchEmoteRef = {
 
 export type TwitchChatMessage = {
     id: string;
+    sourceId: string | null;
     channel: string;
     channelId: string | null;
     username: string;
@@ -127,11 +128,6 @@ export function parseEmotes(emoteString: string): TwitchEmoteRef[] {
     return emotes.sort((a, b) => a.start - b.start);
 }
 
-/**
- * Parses a single raw IRC line from Twitch's chat WebSocket into a
- * structured chat message. Returns null when the line isn't a PRIVMSG
- * (chat message) or is malformed.
- */
 export function parseIrcLine(
     line: string,
     channelLower: string
@@ -191,10 +187,14 @@ export function parseIrcLine(
 
     const emotes = parseEmotes(tags["emotes"] || "");
 
+    const sourceId = tags["source-id"] || null;
+
     return {
         id:
+            sourceId ||
             tags["id"] ||
             `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        sourceId,
         channel: channelLower,
         channelId: tags["room-id"] || null,
         username,
