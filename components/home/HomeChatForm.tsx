@@ -28,20 +28,20 @@ type HomeChatFormProps = {
 };
 
 export function HomeChatForm({
-                                 platform,
-                                 channel,
-                                 onChannelChange,
-                                 secondPlatform,
-                                 secondChannel,
-                                 onSecondChannelChange,
-                                 multi,
-                                 onMultiChange,
-                                 error,
-                                 channelPlaceholder,
-                                 secondChannelPlaceholder,
-                                 onSubmit,
-                                 onPlatformChange,
-                             }: HomeChatFormProps) {
+    platform,
+    channel,
+    onChannelChange,
+    secondPlatform,
+    secondChannel,
+    onSecondChannelChange,
+    multi,
+    onMultiChange,
+    error,
+    channelPlaceholder,
+    secondChannelPlaceholder,
+    onSubmit,
+    onPlatformChange,
+}: HomeChatFormProps) {
     const t = useTranslations("home");
 
     const params =
@@ -60,11 +60,10 @@ export function HomeChatForm({
                     onClick={() =>
                         onMultiChange(false)
                     }
-                    className={`rounded-full px-4 py-2 text-sm ${
-                        !multi
+                    className={`px-4 py-2 text-sm ${!multi
                             ? "bg-[#F55376] text-white"
                             : "bg-twitch-panel text-zinc-400"
-                    }`}
+                        }`}
                 >
                     {t("singleChat")}
                 </button>
@@ -74,11 +73,10 @@ export function HomeChatForm({
                     onClick={() =>
                         onMultiChange(true)
                     }
-                    className={`rounded-full px-4 py-2 text-sm ${
-                        multi
+                    className={`px-4 py-2 text-sm ${multi
                             ? "bg-[#F55376] text-white"
                             : "bg-twitch-panel text-zinc-400"
-                    }`}
+                        }`}
                 >
                     {t("multiChat")}
                 </button>
@@ -93,7 +91,7 @@ export function HomeChatForm({
                                 event.target.value as Platform
                             )
                         }
-                        className="rounded-lg border border-twitch-border bg-twitch-panel px-3 text-sm outline-none focus:border-[#F55376]"
+                        className="border border-twitch-border bg-twitch-panel px-3 text-sm outline-none focus:border-[#F55376]"
                     >
                         <option value="twitch">
                             Twitch
@@ -122,7 +120,7 @@ export function HomeChatForm({
                         placeholder={
                             channelPlaceholder
                         }
-                        className="min-h-12 flex-1 rounded-lg border border-twitch-border bg-twitch-panel px-4 py-3 text-base text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-[#F55376]"
+                        className="min-h-12 flex-1 border border-twitch-border bg-twitch-panel px-4 py-3 text-base text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-[#F55376]"
                     />
                 </div>
 
@@ -138,7 +136,7 @@ export function HomeChatForm({
                                     true
                                 )
                             }
-                            className="rounded-lg border border-twitch-border bg-twitch-panel px-3 text-sm outline-none focus:border-[#F55376]"
+                            className="border border-twitch-border bg-twitch-panel px-3 text-sm outline-none focus:border-[#F55376]"
                         >
                             <option value="twitch">
                                 Twitch
@@ -169,7 +167,7 @@ export function HomeChatForm({
                             placeholder={
                                 secondChannelPlaceholder
                             }
-                            className="min-h-12 flex-1 rounded-lg border border-twitch-border bg-twitch-panel px-4 py-3 text-base text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-[#F55376]"
+                            className="min-h-12 flex-1 border border-twitch-border bg-twitch-panel px-4 py-3 text-base text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-[#F55376]"
                         />
                     </div>
                 )}
@@ -182,7 +180,7 @@ export function HomeChatForm({
 
                 <button
                     type="submit"
-                    className="min-h-12 rounded-lg bg-[#F55376] px-6 py-3 font-semibold text-white transition-colors hover:bg-[#e33361]"
+                    className="min-h-12 bg-[#F55376] px-6 py-3 font-semibold text-white transition-colors hover:bg-[#e33361]"
                 >
                     {multi
                         ? t("multiChatSubmit")

@@ -23,7 +23,7 @@ export function LoginForm() {
     return (
         <form
             onSubmit={handleSubmit}
-            className="w-full max-w-sm rounded-xl border border-twitch-border bg-twitch-panel p-6 shadow-2xl"
+            className="w-full max-w-sm border border-twitch-border bg-twitch-panel p-6 shadow-2xl"
         >
             <h1 className="mb-1 text-xl font-bold text-zinc-100">
                 {t("loginTitle")}
@@ -49,8 +49,8 @@ export function LoginForm() {
                     onChange={(event) =>
                         setEmail(event.target.value)
                     }
-                    className="rounded-lg border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
-                    placeholder="voce@email.com"
+                    className="border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
+                    placeholder="email@email.com"
                 />
             </div>
 
@@ -70,13 +70,13 @@ export function LoginForm() {
                     onChange={(event) =>
                         setPassword(event.target.value)
                     }
-                    className="rounded-lg border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
+                    className="border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
                     placeholder="••••••••"
                 />
             </div>
 
             {error && (
-                <p className="mb-4 rounded-lg bg-red-950/50 px-3 py-2 text-sm text-red-400">
+                <p className="mb-4 bg-red-950/50 px-3 py-2 text-sm text-red-400">
                     {error}
                 </p>
             )}
@@ -88,7 +88,7 @@ export function LoginForm() {
             <button
                 type="submit"
                 disabled={loading}
-                className="mt-4 w-full rounded-lg bg-[#F55376] px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="mt-4 w-full bg-[#F55376] px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
                 {loading ? t("loading") : t("loginSubmit")}
             </button>

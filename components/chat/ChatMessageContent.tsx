@@ -5,8 +5,8 @@ import type {
 } from "@/lib/chat/types";
 
 export function ChatMessageContent({
-                                       message,
-                                   }: {
+    message,
+}: {
     message: UnifiedChatMessage;
 }) {
     if (
@@ -24,13 +24,13 @@ export function ChatMessageContent({
             parts.push(
                 <span
                     key={`text-${cursor}`}
-        >
-            {message.message.slice(
-                cursor,
-                emote.start
-            )}
-            </span>
-        );
+                >
+                    {message.message.slice(
+                        cursor,
+                        emote.start
+                    )}
+                </span>
+            );
         }
 
         const emoteText =
@@ -42,22 +42,22 @@ export function ChatMessageContent({
         parts.push(
             <img
                 key={`emote-${emote.provider}-${emote.id}-${emote.start}`}
-        src={emote.imageUrl}
-        alt={emoteText}
-        title={
-            emote.name ||
-                emoteText
-        }
-        loading="lazy"
-        className="
+                src={emote.imageUrl}
+                alt={emoteText}
+                title={
+                    emote.name ||
+                    emoteText
+                }
+                loading="lazy"
+                className="
         inline-block
         h-[24px]
         w-[24px]
         align-middle
         object-contain
         "
-        />
-    );
+            />
+        );
 
         cursor = emote.end + 1;
     }
@@ -69,12 +69,12 @@ export function ChatMessageContent({
         parts.push(
             <span
                 key={`text-${cursor}`}
-    >
-        {message.message.slice(
-            cursor
-        )}
-        </span>
-    );
+            >
+                {message.message.slice(
+                    cursor
+                )}
+            </span>
+        );
     }
 
     return <>{parts}</>;

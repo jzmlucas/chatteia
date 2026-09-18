@@ -58,6 +58,8 @@
     "newMessagesButton": "↓ New messages"
   },
   "multiChat": {
+    "layoutUnified": "Unified",
+    "layoutByPlatform": "By Platform",
     "addChannel": "Add channel",
     "platform": "Platform",
     "addChannelPlaceholder": "Add channel…",

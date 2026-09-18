@@ -47,6 +47,26 @@ async function fetchProfile(
     return data;
 }
 
+async function syncSessionCookie(accessToken: string | undefined) {
+    try {
+        if (accessToken) {
+            await fetch("/api/session/sync", {
+                method: "POST",
+                credentials: "include",
+                headers: { Authorization: `Bearer ${accessToken}` },
+            });
+        } else {
+            await fetch("/api/session/sync", {
+                method: "DELETE",
+                credentials: "include",
+            });
+        }
+    } catch {
+        // Silencia — o cookie fica só como fallback; requests que já
+        // mandam o Authorization header continuam funcionando.
+    }
+}
+
 export function AuthProvider({
                                   children,
                               }: {
@@ -74,6 +94,7 @@ export function AuthProvider({
             }
 
             setSession(currentSession);
+            await syncSessionCookie(currentSession?.access_token);
 
             if (currentSession?.user) {
                 const currentProfile = await fetchProfile(
@@ -97,6 +118,7 @@ export function AuthProvider({
         } = supabaseBrowser.auth.onAuthStateChange(
             async (_event, nextSession) => {
                 setSession(nextSession);
+                await syncSessionCookie(nextSession?.access_token);
 
                 if (nextSession?.user) {
                     const nextProfile = await fetchProfile(
@@ -132,6 +154,7 @@ export function AuthProvider({
 
     async function signOut() {
         await supabaseBrowser.auth.signOut();
+        await syncSessionCookie(undefined);
 
         setSession(null);
         setProfile(null);

@@ -3,6 +3,8 @@ import { exchangeKickCode } from "@/lib/platforms/kick/oauth";
 import { saveKickToken } from "@/lib/platforms/kick/token-store";
 import { fetchKickCurrentUser } from "@/lib/platforms/kick/user";
 import { subscribeKickChat } from "@/lib/platforms/kick/subscriptions";
+import { platformConnectionRepo } from "@/lib/repositories/platformConnections";
+import { getSessionUser } from "@/lib/auth/getSessionUser";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -83,6 +85,28 @@ export async function GET(request: NextRequest) {
         ? token.scope.split(" ").filter(Boolean)
         : [],
     });
+
+    // Vincula a conta KICK ao usuário logado no Chatteia (via repositório desacoplado)
+    try {
+      const sessionUser = await getSessionUser(request);
+
+      if (sessionUser) {
+        await platformConnectionRepo.save({
+          chatteiaUserId: sessionUser.id,
+          platform: "kick",
+          platformUsername: user.username,
+          platformUserId: user.id,
+          connectedAt: new Date(),
+        });
+      } else {
+        console.warn(
+          "[KICK] Nenhuma sessão do Chatteia encontrada no callback — conexão não vinculada."
+        );
+      }
+    } catch (linkError) {
+      // Não bloqueia o fluxo principal — apenas loga o erro
+      console.error("[KICK] Falha ao vincular conta ao usuário Chatteia:", linkError);
+    }
 
     let subscriptionOk = true;
     let subscriptionError = "";

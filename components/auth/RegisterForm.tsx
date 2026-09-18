@@ -31,7 +31,7 @@ export function RegisterForm() {
 
     if (success) {
         return (
-            <div className="w-full max-w-sm rounded-xl border border-twitch-border bg-twitch-panel p-6 text-center shadow-2xl">
+            <div className="w-full max-w-sm border border-twitch-border bg-twitch-panel p-6 text-center shadow-2xl">
                 <h1 className="mb-2 text-xl font-bold text-zinc-100">
                     {t("registerSuccessTitle")}
                 </h1>
@@ -62,7 +62,7 @@ export function RegisterForm() {
     return (
         <form
             onSubmit={handleSubmit}
-            className="w-full max-w-sm rounded-xl border border-twitch-border bg-twitch-panel p-6 shadow-2xl"
+            className="w-full max-w-sm border border-twitch-border bg-twitch-panel p-6 shadow-2xl"
         >
             <h1 className="mb-1 text-xl font-bold text-zinc-100">
                 {t("registerTitle")}
@@ -81,11 +81,10 @@ export function RegisterForm() {
                     <button
                         type="button"
                         onClick={() => setAccountType("user")}
-                        className={`rounded-lg border px-3 py-2.5 text-sm transition-colors ${
-                            accountType === "user"
-                                ? "border-[#F55376] bg-[#F55376]/10 text-white"
-                                : "border-twitch-border text-zinc-400"
-                        }`}
+                        className={`border px-3 py-2.5 text-sm transition-colors ${accountType === "user"
+                            ? "border-[#F55376] bg-[#F55376]/10 text-white"
+                            : "border-twitch-border text-zinc-400"
+                            }`}
                     >
                         {t("accountTypeUser")}
                     </button>
@@ -93,11 +92,10 @@ export function RegisterForm() {
                     <button
                         type="button"
                         onClick={() => setAccountType("streamer")}
-                        className={`rounded-lg border px-3 py-2.5 text-sm transition-colors ${
-                            accountType === "streamer"
-                                ? "border-[#F55376] bg-[#F55376]/10 text-white"
-                                : "border-twitch-border text-zinc-400"
-                        }`}
+                        className={`border px-3 py-2.5 text-sm transition-colors ${accountType === "streamer"
+                            ? "border-[#F55376] bg-[#F55376]/10 text-white"
+                            : "border-twitch-border text-zinc-400"
+                            }`}
                     >
                         {t("accountTypeStreamer")}
                     </button>
@@ -120,8 +118,8 @@ export function RegisterForm() {
                     onChange={(event) =>
                         setUsername(event.target.value)
                     }
-                    className="rounded-lg border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
-                    placeholder="seunome"
+                    className="border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
+                    placeholder="nick"
                 />
 
                 <span className="text-[11px] text-zinc-500">
@@ -145,8 +143,8 @@ export function RegisterForm() {
                     onChange={(event) =>
                         setEmail(event.target.value)
                     }
-                    className="rounded-lg border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
-                    placeholder="voce@email.com"
+                    className="border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
+                    placeholder="email@email.com"
                 />
             </div>
 
@@ -166,7 +164,7 @@ export function RegisterForm() {
                     onChange={(event) =>
                         setPassword(event.target.value)
                     }
-                    className="rounded-lg border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
+                    className="border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
                     placeholder="••••••••"
                 />
             </div>
@@ -187,13 +185,13 @@ export function RegisterForm() {
                     onChange={(event) =>
                         setConfirmPassword(event.target.value)
                     }
-                    className="rounded-lg border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
+                    className="border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
                     placeholder="••••••••"
                 />
             </div>
 
             {error && (
-                <p className="mb-4 mt-2 rounded-lg bg-red-950/50 px-3 py-2 text-sm text-red-400">
+                <p className="mb-4 mt-2 bg-red-950/50 px-3 py-2 text-sm text-red-400">
                     {error}
                 </p>
             )}
@@ -201,7 +199,7 @@ export function RegisterForm() {
             <button
                 type="submit"
                 disabled={loading || isCoolingDown}
-                className="mt-4 w-full rounded-lg bg-[#F55376] px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-4 w-full bg-[#F55376] px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
                 {loading
                     ? t("loading")

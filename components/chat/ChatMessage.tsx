@@ -14,15 +14,15 @@ import type {
 
 export type FeedMessage =
     UnifiedChatMessage & {
-    channelLabel?: string;
-    channelColor?: string;
-};
+        channelLabel?: string;
+        channelColor?: string;
+    };
 
 export function ChatMessage({
-                                message,
-                                showChannelTag,
-                                obsSettings,
-                            }: {
+    message,
+    showChannelTag,
+    obsSettings,
+}: {
     message: FeedMessage;
     showChannelTag: boolean;
     obsSettings?: ObsChatSettings;
@@ -41,7 +41,7 @@ export function ChatMessage({
 
     const backgroundColor =
         isObs &&
-        obsSettings.messageBackground
+            obsSettings.messageBackground
             ? hexToRgba(
                 obsSettings.messageBackgroundColor,
                 obsSettings.messageBackgroundOpacity
@@ -73,13 +73,13 @@ export function ChatMessage({
                 isObs
                     ? {
                         fontFamily:
-                        obsSettings.fontFamily,
+                            obsSettings.fontFamily,
 
                         fontSize:
                             `${obsSettings.fontSize}px`,
 
                         fontWeight:
-                        obsSettings.fontWeight,
+                            obsSettings.fontWeight,
 
                         gap: "0.25rem",
 
@@ -89,10 +89,10 @@ export function ChatMessage({
                                 : "0",
 
                         borderRadius:
-                            `${obsSettings.borderRadius}px`,
+                            "0",
 
                         backgroundColor:
-                        backgroundColor,
+                            backgroundColor,
 
                         marginBottom:
                             "0",
@@ -104,7 +104,6 @@ export function ChatMessage({
                 <span
                     className="
                         shrink-0
-                        rounded
                         px-1.5
                         py-0.5
                         text-[10px]
@@ -215,43 +214,43 @@ export function ChatMessage({
 
             {(!isObs ||
                 obsSettings.showUsername) && (
-                <>
-                    <span
-                        className="font-semibold"
-                        style={{
-                            color:
-                            usernameColor,
-                        }}
-                    >
-                        {
-                            message.displayName
-                        }
-                    </span>
+                    <>
+                        <span
+                            className="font-semibold"
+                            style={{
+                                color:
+                                    usernameColor,
+                            }}
+                        >
+                            {
+                                message.displayName
+                            }
+                        </span>
 
-                    <span
-                        style={
-                            isObs
-                                ? {
-                                    color:
-                                    messageColor,
-                                }
-                                : undefined
-                        }
-                        className={
-                            isObs
-                                ? undefined
-                                : "text-zinc-400"
-                        }
-                    >
-                        :
-                    </span>
-                </>
-            )}
+                        <span
+                            style={
+                                isObs
+                                    ? {
+                                        color:
+                                            messageColor,
+                                    }
+                                    : undefined
+                            }
+                            className={
+                                isObs
+                                    ? undefined
+                                    : "text-zinc-400"
+                            }
+                        >
+                            :
+                        </span>
+                    </>
+                )}
 
             <span
                 className={
                     message.isAction &&
-                    !isObs
+                        !isObs
                         ? "italic text-zinc-300"
                         : undefined
                 }
@@ -259,7 +258,7 @@ export function ChatMessage({
                     isObs
                         ? {
                             color:
-                            messageColor,
+                                messageColor,
                         }
                         : undefined
                 }
@@ -285,9 +284,8 @@ function hexToRgba(
             normalized
         )
     ) {
-        return `rgba(0, 0, 0, ${
-            opacity / 100
-        })`;
+        return `rgba(0, 0, 0, ${opacity / 100
+            })`;
     }
 
     const red = parseInt(
@@ -305,12 +303,11 @@ function hexToRgba(
         16
     );
 
-    return `rgba(${red}, ${green}, ${blue}, ${
-        Math.max(
-            0,
-            Math.min(100, opacity)
-        ) / 100
-    })`;
+    return `rgba(0, 0, 0, ${opacity / 100
+        })`.replace(
+            "0, 0, 0",
+            `${red}, ${green}, ${blue}`
+        );
 }
 
 function getAnimationClass(

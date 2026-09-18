@@ -3,12 +3,14 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
+import { useSearchParams } from "next/navigation";
 import { locales, localeLabels, localeFlags, type AppLocale } from "@/i18n/config";
 
 export function LanguageSwitcher() {
     const t = useTranslations("languageSwitcher");
     const currentLocale = useLocale() as AppLocale;
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const router = useRouter();
 
     const [open, setOpen] = useState(false);
@@ -30,8 +32,9 @@ export function LanguageSwitcher() {
 
     function handleSelect(locale: AppLocale) {
         setOpen(false);
-        // Troca só o idioma, mantendo a rota atual (home, chat, multi-chat…)
-        router.replace(pathname, { locale });
+        const params = searchParams.toString();
+        const query = params ? `?${params}` : "";
+        router.replace(`${pathname}${query}` as any, { locale });
     }
 
     return (

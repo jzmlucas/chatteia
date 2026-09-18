@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 
-import { ChatFeed } from "@/components/chat/ChatFeed";
 import { MultiChatHeader } from "@/components/chat/MultiChatHeader";
+import { MultiChatBoard } from "@/components/chat/layout/MultiChatBoard";
 
 import { useMultiChatState } from "@/hooks/chat/useMultiChatState";
 
@@ -59,14 +59,9 @@ export default function MultiChatPage() {
                 onRemoveTarget={removeTarget}
             />
 
-            <ChatFeed
-                messages={feedMessages}
-                showChannelTag
-                emptyLabel={
-                    targets.length === 0
-                        ? t("noChannels")
-                        : t("waitingMessages")
-                }
+            <MultiChatBoard 
+                targets={targets} 
+                feedMessages={feedMessages} 
             />
         </main>
     );

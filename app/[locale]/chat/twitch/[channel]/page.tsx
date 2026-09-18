@@ -97,7 +97,7 @@ export default function ChatPage() {
     const secondConnection =
         addedChannel
             ? connections[
-                addedChannel
+            addedChannel
             ]
             : null;
 
@@ -179,8 +179,8 @@ export default function ChatPage() {
 
         router.push(
             `/chat/multi-chat?channels=${encodeURIComponent(
-    `${channel},${clean}`
-)}`
+                `${channel},${clean}`
+            )}`
         );
     }
 
@@ -277,7 +277,7 @@ export default function ChatPage() {
 
     const obsUrl =
         typeof window !==
-        "undefined"
+            "undefined"
             ? `${window.location.origin}/${locale}/obs/${channel}`
             : `/${locale}/obs/${channel}`;
 
@@ -375,12 +375,12 @@ export default function ChatPage() {
                                 placeholder={t(
                                     "addChannelPlaceholder"
                                 )}
-                                className="w-36 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-[#9146FF] sm:w-48"
+                                className="w-36 border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-[#9146FF] sm:w-48"
                             />
 
                             <button
                                 type="submit"
-                                className="rounded-md bg-[#9146FF] px-3 py-1.5 text-sm font-medium transition-colors hover:bg-[#a970ff]"
+                                className="bg-[#9146FF] px-3 py-1.5 text-sm font-medium transition-colors hover:bg-[#a970ff]"
                             >
                                 {t(
                                     "addChannelSubmit"
@@ -397,7 +397,7 @@ export default function ChatPage() {
 
                             {
                                 statusLabel[
-                                    status
+                                status
                                 ]
                             }
                         </div>
@@ -437,7 +437,7 @@ export default function ChatPage() {
                             placeholder={t(
                                 "searchPlaceholder"
                             )}
-                            className="w-40 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-[#9146FF] sm:w-56"
+                            className="w-40 border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-[#9146FF] sm:w-56"
                         />
 
                         <form
@@ -461,12 +461,12 @@ export default function ChatPage() {
                                 placeholder={t(
                                     "switchChannelPlaceholder"
                                 )}
-                                className="w-36 rounded-md border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-[#9146FF] sm:w-48"
+                                className="w-36 border border-twitch-border bg-twitch-dark px-3 py-1.5 text-sm outline-none focus:border-[#9146FF] sm:w-48"
                             />
 
                             <button
                                 type="submit"
-                                className="rounded-md bg-[#9146FF] px-3 py-1.5 text-sm font-medium transition-colors hover:bg-[#a970ff]"
+                                className="bg-[#9146FF] px-3 py-1.5 text-sm font-medium transition-colors hover:bg-[#a970ff]"
                             >
                                 {t(
                                     "switchChannelSubmit"
@@ -498,7 +498,7 @@ export default function ChatPage() {
                 )}
                 emptyLabel={
                     status ===
-                    "connected"
+                        "connected"
                         ? t(
                             "waitingMessages"
                         )
