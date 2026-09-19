@@ -618,3 +618,12 @@ FodyWeavers.xsd
 .idea
 
 .kick-tokens.json
+.env
+.env.local
+*.env
+*.env.local
+
+.env
+.env.local
+*.env
+*.env.local
