@@ -27,7 +27,7 @@ type ConnectionStatus =
 type ConnectionsMap = Record<string, ConnectionStatus>;
 
 export function PlatformConnections() {
-    const { session } = useAuth();
+    const { profile } = useAuth();
     const t = useTranslations("connections");
 
     const [connections, setConnections] =
@@ -39,16 +39,13 @@ export function PlatformConnections() {
     const containerRef = useRef<HTMLDivElement>(null);
 
     const fetchConnections = useCallback(async () => {
-        if (!session?.access_token) {
+        if (!profile) {
             return;
         }
 
         try {
             const res = await fetch("/api/platforms/connections", {
                 credentials: "include",
-                headers: {
-                    Authorization: `Bearer ${session.access_token}`,
-                },
             });
 
             if (!res.ok) {
@@ -63,7 +60,7 @@ export function PlatformConnections() {
         } catch {
             setError(true);
         }
-    }, [session?.access_token]);
+    }, [profile]);
 
     useEffect(() => {
         fetchConnections();
@@ -86,7 +83,7 @@ export function PlatformConnections() {
 
     async function handleDisconnect(platform: string) {
         if (platform !== "kick") return;
-        if (!session?.access_token) return;
+        if (!profile) return;
 
         try {
             await fetch(
@@ -94,9 +91,6 @@ export function PlatformConnections() {
                 {
                     method: "POST",
                     credentials: "include",
-                    headers: {
-                        Authorization: `Bearer ${session.access_token}`,
-                    },
                 }
             );
 

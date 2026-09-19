@@ -4,32 +4,22 @@ import { useTranslations } from "next-intl";
 
 import { useRouter } from "@/i18n/navigation";
 
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { translateAuthError } from "@/lib/auth/errors";
 
 export function useLoginForm() {
     const router = useRouter();
+    const { refreshProfile } = useAuth();
 
     const t = useTranslations("auth");
 
-    const [email, setEmail] =
-        useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [needsResend, setNeedsResend] = useState(false);
 
-    const [password, setPassword] =
-        useState("");
-
-    const [error, setError] =
-        useState<string | null>(null);
-
-    const [loading, setLoading] =
-        useState(false);
-
-    const [needsResend, setNeedsResend] =
-        useState(false);
-
-    async function handleSubmit(
-        event: FormEvent<HTMLFormElement>
-    ) {
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
 
         setError(null);
@@ -43,32 +33,48 @@ export function useLoginForm() {
 
         setLoading(true);
 
-        const { error: signInError } =
-            await supabaseBrowser.auth.signInWithPassword({
-                email: email.trim(),
-                password,
+        try {
+            const response = await fetch("/api/auth/login", {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email: email.trim(),
+                    password,
+                }),
             });
 
-        setLoading(false);
+            if (!response.ok) {
+                const data = await response
+                    .json()
+                    .catch(() => ({}));
 
-        if (signInError) {
-            setError(
-                translateAuthError(signInError.message, t)
-            );
+                const code = data.error ?? "GENERIC";
 
-            if (
-                signInError.message
-                    .toLowerCase()
-                    .includes("email not confirmed")
-            ) {
-                setNeedsResend(true);
+                setError(translateAuthError(code, t));
+
+                if (code === "EMAIL_NOT_CONFIRMED") {
+                    setNeedsResend(true);
+                }
+
+                return;
             }
 
-            return;
-        }
+            await refreshProfile();
 
-        router.push("/");
-        router.refresh();
+            router.push("/");
+        } catch {
+            setError(
+                translateAuthError(
+                    "NETWORK_ERROR",
+                    t
+                )
+            );
+        } finally {
+            setLoading(false);
+        }
     }
 
     return {

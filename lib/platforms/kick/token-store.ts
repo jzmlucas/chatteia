@@ -1,5 +1,5 @@
 import { refreshKickAccessToken } from "./oauth";
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { pool } from "@/lib/db/pool";
 
 export type KickToken = {
   broadcasterUserId: string;
@@ -34,127 +34,87 @@ function rowToToken(row: KickTokenRow): KickToken {
 }
 
 export async function saveKickToken(token: KickToken) {
-  const { error } = await supabaseAdmin
-      .from("kick_tokens")
-      .upsert(
-          {
-            broadcaster_user_id: token.broadcasterUserId,
-            username: token.username,
-            access_token: token.accessToken,
-            refresh_token: token.refreshToken,
-            token_type: token.tokenType,
-            expires_at: token.expiresAt,
-            scope: [...new Set(token.scope)],
-            updated_at: new Date().toISOString(),
-          },
-          {
-            onConflict: "broadcaster_user_id",
-          }
-      );
-
-  if (error) {
-    console.error("[KICK] Erro ao salvar token no Supabase:", error);
+  try {
+    await pool.query(
+        `insert into kick_tokens
+             (broadcaster_user_id, username, access_token, refresh_token, token_type, expires_at, scope, updated_at)
+         values ($1, $2, $3, $4, $5, $6, $7, now())
+         on conflict (broadcaster_user_id)
+         do update set
+             username = excluded.username,
+             access_token = excluded.access_token,
+             refresh_token = excluded.refresh_token,
+             token_type = excluded.token_type,
+             expires_at = excluded.expires_at,
+             scope = excluded.scope,
+             updated_at = now()`,
+        [
+          token.broadcasterUserId,
+          token.username,
+          token.accessToken,
+          token.refreshToken,
+          token.tokenType,
+          token.expiresAt,
+          [...new Set(token.scope)],
+        ]
+    );
+  } catch (error) {
+    console.error("[KICK] Erro ao salvar token no Postgres:", error);
 
     throw new Error(
-        `Falha ao salvar token da KICK no Supabase: ${error.message}`
+        `Falha ao salvar token da KICK no Postgres: ${(error as Error).message}`
     );
   }
 }
 
-export async function getKickToken(
-    broadcasterUserId: string
-) {
-  const { data, error } = await supabaseAdmin
-      .from("kick_tokens")
-      .select(
-          `
-        broadcaster_user_id,
-        username,
-        access_token,
-        refresh_token,
-        token_type,
-        expires_at,
-        scope
-      `
-      )
-      .eq("broadcaster_user_id", broadcasterUserId)
-      .maybeSingle();
-
-  if (error) {
-    console.error(
-        "[KICK] Erro ao buscar token no Supabase:",
-        error
+export async function getKickToken(broadcasterUserId: string) {
+  try {
+    const { rows } = await pool.query<KickTokenRow>(
+        `select broadcaster_user_id, username, access_token, refresh_token, token_type, expires_at, scope
+         from kick_tokens
+         where broadcaster_user_id = $1
+         limit 1`,
+        [broadcasterUserId]
     );
 
-    throw new Error(
-        `Falha ao buscar token da KICK: ${error.message}`
-    );
-  }
+    return rows[0] ? rowToToken(rows[0]) : null;
+  } catch (error) {
+    console.error("[KICK] Erro ao buscar token no Postgres:", error);
 
-  if (!data) {
-    return null;
+    throw new Error(`Falha ao buscar token da KICK: ${(error as Error).message}`);
   }
-
-  return rowToToken(data as KickTokenRow);
 }
 
 export async function getAllKickTokens() {
-  const { data, error } = await supabaseAdmin
-      .from("kick_tokens")
-      .select(
-          `
-        broadcaster_user_id,
-        username,
-        access_token,
-        refresh_token,
-        token_type,
-        expires_at,
-        scope
-      `
-      )
-      .order("username", {
-        ascending: true,
-      });
-
-  if (error) {
-    console.error(
-        "[KICK] Erro ao buscar tokens no Supabase:",
-        error
+  try {
+    const { rows } = await pool.query<KickTokenRow>(
+        `select broadcaster_user_id, username, access_token, refresh_token, token_type, expires_at, scope
+         from kick_tokens
+         order by username asc`
     );
 
-    throw new Error(
-        `Falha ao buscar tokens da KICK: ${error.message}`
-    );
-  }
+    return rows.map(rowToToken);
+  } catch (error) {
+    console.error("[KICK] Erro ao buscar tokens no Postgres:", error);
 
-  return (data ?? []).map((row) =>
-      rowToToken(row as KickTokenRow)
-  );
-}
-
-export async function deleteKickToken(
-    broadcasterUserId: string
-) {
-  const { error } = await supabaseAdmin
-      .from("kick_tokens")
-      .delete()
-      .eq("broadcaster_user_id", broadcasterUserId);
-
-  if (error) {
-    console.error(
-        "[KICK] Erro ao remover token do Supabase:",
-        error
-    );
-
-    throw new Error(
-        `Falha ao remover token da KICK: ${error.message}`
-    );
+    throw new Error(`Falha ao buscar tokens da KICK: ${(error as Error).message}`);
   }
 }
 
-export async function getValidKickToken(
-    broadcasterUserId: string
-) {
+export async function deleteKickToken(broadcasterUserId: string) {
+  try {
+    await pool.query(
+        "delete from kick_tokens where broadcaster_user_id = $1",
+        [broadcasterUserId]
+    );
+  } catch (error) {
+    console.error("[KICK] Erro ao remover token do Postgres:", error);
+
+    throw new Error(`Falha ao remover token da KICK: ${(error as Error).message}`);
+  }
+}
+
+export async function getValidKickToken(broadcasterUserId: string) {
   const token = await getKickToken(broadcasterUserId);
 
   if (!token) {
@@ -172,22 +132,16 @@ export async function getValidKickToken(
   }
 
   try {
-    const refreshed = await refreshKickAccessToken(
-        token.refreshToken
-    );
+    const refreshed = await refreshKickAccessToken(token.refreshToken);
 
     const nextToken: KickToken = {
       ...token,
       accessToken: refreshed.access_token,
-      refreshToken:
-          refreshed.refresh_token ?? token.refreshToken,
+      refreshToken: refreshed.refresh_token ?? token.refreshToken,
       tokenType: refreshed.token_type,
-      expiresAt:
-          Date.now() + refreshed.expires_in * 1000,
+      expiresAt: Date.now() + refreshed.expires_in * 1000,
       scope: refreshed.scope
-          ? refreshed.scope
-              .split(" ")
-              .filter(Boolean)
+          ? refreshed.scope.split(" ").filter(Boolean)
           : token.scope,
     };
 
@@ -195,53 +149,28 @@ export async function getValidKickToken(
 
     return nextToken;
   } catch (error) {
-    console.error(
-        "[KICK] Falha ao renovar token:",
-        error
-    );
+    console.error("[KICK] Falha ao renovar token:", error);
 
     return token;
   }
 }
 
-export async function getKickTokenByChannel(
-    channel: string
-) {
-  const normalized = channel
-      .trim()
-      .replace(/^#/, "")
-      .toLowerCase();
+export async function getKickTokenByChannel(channel: string) {
+  const normalized = channel.trim().replace(/^#/, "").toLowerCase();
 
-  const { data, error } = await supabaseAdmin
-      .from("kick_tokens")
-      .select(
-          `
-        broadcaster_user_id,
-        username,
-        access_token,
-        refresh_token,
-        token_type,
-        expires_at,
-        scope
-      `
-      )
-      .ilike("username", normalized)
-      .maybeSingle();
-
-  if (error) {
-    console.error(
-        "[KICK] Erro ao buscar canal no Supabase:",
-        error
+  try {
+    const { rows } = await pool.query<KickTokenRow>(
+        `select broadcaster_user_id, username, access_token, refresh_token, token_type, expires_at, scope
+         from kick_tokens
+         where lower(username) = $1
+         limit 1`,
+        [normalized]
     );
 
-    throw new Error(
-        `Falha ao buscar canal da KICK: ${error.message}`
-    );
-  }
+    return rows[0] ? rowToToken(rows[0]) : null;
+  } catch (error) {
+    console.error("[KICK] Erro ao buscar canal no Postgres:", error);
 
-  if (!data) {
-    return null;
+    throw new Error(`Falha ao buscar canal da KICK: ${(error as Error).message}`);
   }
-
-  return rowToToken(data as KickTokenRow);
 }

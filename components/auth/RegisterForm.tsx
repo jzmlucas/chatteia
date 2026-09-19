@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 
 import { Link } from "@/i18n/navigation";
 import { useRegisterForm } from "@/hooks/auth/useRegisterForm";
-import { ResendConfirmationEmail } from "@/components/auth/ResendConfirmationEmail";
 
 export function RegisterForm() {
     const t = useTranslations("auth");
@@ -21,43 +20,9 @@ export function RegisterForm() {
         confirmPassword,
         setConfirmPassword,
         error,
-        success,
         loading,
-        isCoolingDown,
-        cooldownSeconds,
         handleSubmit,
-        resendConfirmation,
     } = useRegisterForm();
-
-    if (success) {
-        return (
-            <div className="w-full max-w-sm border border-twitch-border bg-twitch-panel p-6 text-center shadow-2xl">
-                <h1 className="mb-2 text-xl font-bold text-zinc-100">
-                    {t("registerSuccessTitle")}
-                </h1>
-
-                <p className="text-sm text-zinc-400">
-                    {t("registerSuccessSubtitle")}
-                </p>
-
-                <p className="mt-3 text-xs text-zinc-500">
-                    {t("resendHint")}
-                </p>
-
-                <ResendConfirmationEmail
-                    email={email}
-                    resend={resendConfirmation}
-                />
-
-                <Link
-                    href="/login"
-                    className="mt-4 block text-sm font-medium text-[#F55376] hover:underline"
-                >
-                    {t("loginLink")}
-                </Link>
-            </div>
-        );
-    }
 
     return (
         <form
@@ -82,8 +47,8 @@ export function RegisterForm() {
                         type="button"
                         onClick={() => setAccountType("user")}
                         className={`border px-3 py-2.5 text-sm transition-colors ${accountType === "user"
-                            ? "border-[#F55376] bg-[#F55376]/10 text-white"
-                            : "border-twitch-border text-zinc-400"
+                                ? "border-[#F55376] bg-[#F55376]/10 text-white"
+                                : "border-twitch-border text-zinc-400"
                             }`}
                     >
                         {t("accountTypeUser")}
@@ -93,8 +58,8 @@ export function RegisterForm() {
                         type="button"
                         onClick={() => setAccountType("streamer")}
                         className={`border px-3 py-2.5 text-sm transition-colors ${accountType === "streamer"
-                            ? "border-[#F55376] bg-[#F55376]/10 text-white"
-                            : "border-twitch-border text-zinc-400"
+                                ? "border-[#F55376] bg-[#F55376]/10 text-white"
+                                : "border-twitch-border text-zinc-400"
                             }`}
                     >
                         {t("accountTypeStreamer")}
@@ -115,9 +80,7 @@ export function RegisterForm() {
                     type="text"
                     autoComplete="username"
                     value={username}
-                    onChange={(event) =>
-                        setUsername(event.target.value)
-                    }
+                    onChange={(event) => setUsername(event.target.value)}
                     className="border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
                     placeholder="nick"
                 />
@@ -140,9 +103,7 @@ export function RegisterForm() {
                     type="email"
                     autoComplete="email"
                     value={email}
-                    onChange={(event) =>
-                        setEmail(event.target.value)
-                    }
+                    onChange={(event) => setEmail(event.target.value)}
                     className="border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
                     placeholder="email@email.com"
                 />
@@ -161,9 +122,7 @@ export function RegisterForm() {
                     type="password"
                     autoComplete="new-password"
                     value={password}
-                    onChange={(event) =>
-                        setPassword(event.target.value)
-                    }
+                    onChange={(event) => setPassword(event.target.value)}
                     className="border border-twitch-border bg-twitch-dark px-3 py-2.5 text-sm text-zinc-100 outline-none focus-visible:border-[#F55376]"
                     placeholder="••••••••"
                 />
@@ -198,14 +157,10 @@ export function RegisterForm() {
 
             <button
                 type="submit"
-                disabled={loading || isCoolingDown}
+                disabled={loading}
                 className="mt-4 w-full bg-[#F55376] px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-                {loading
-                    ? t("loading")
-                    : isCoolingDown
-                        ? `${t("registerSubmit")} (${cooldownSeconds}s)`
-                        : t("registerSubmit")}
+                {loading ? t("loading") : t("registerSubmit")}
             </button>
 
             <p className="mt-5 text-center text-sm text-zinc-400">

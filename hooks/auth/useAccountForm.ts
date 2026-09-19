@@ -1,16 +1,21 @@
-import { FormEvent, useEffect, useState } from "react";
+import {
+    FormEvent,
+    useEffect,
+    useState,
+} from "react";
 
 import { useTranslations } from "next-intl";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { supabaseBrowser } from "@/lib/supabase/client";
-
-import type { Database } from "@/types/supabase";
 
 export function useAccountForm() {
     const t = useTranslations("auth");
 
-    const { user, profile, refreshProfile } = useAuth();
+    const {
+        user,
+        profile,
+        refreshProfile,
+    } = useAuth();
 
     const [displayName, setDisplayName] =
         useState("");
@@ -31,19 +36,21 @@ export function useAccountForm() {
         useState(false);
 
     useEffect(() => {
-        if (profile) {
-            setDisplayName(
-                profile.display_name ?? ""
-            );
-
-            setBio(
-                profile.bio ?? ""
-            );
-
-            setAvatarUrl(
-                profile.avatar_url ?? ""
-            );
+        if (!profile) {
+            return;
         }
+
+        setDisplayName(
+            profile.display_name ?? ""
+        );
+
+        setBio(
+            profile.bio ?? ""
+        );
+
+        setAvatarUrl(
+            profile.avatar_url ?? ""
+        );
     }, [profile]);
 
     async function handleSubmit(
@@ -59,33 +66,73 @@ export function useAccountForm() {
         setSuccess(false);
         setSaving(true);
 
-        const updateData: Database["public"]["Tables"]["profiles"]["Update"] = {
-            display_name:
-                displayName.trim() || null,
+        try {
+            const payload = {
+                display_name:
+                    displayName.trim() || null,
 
-            bio:
-                bio.trim() || null,
+                bio:
+                    bio.trim() || null,
 
-            avatar_url:
-                avatarUrl.trim() || null,
-        };
+                avatar_url:
+                    avatarUrl.trim() || null,
+            };
 
-        const { error: updateError } =
-            await supabaseBrowser
-                .from("profiles")
-                .update(updateData)
-                .eq("id", user.id);
+            console.log(
+                "[ACCOUNT] Enviando:",
+                payload
+            );
 
-        setSaving(false);
+            const response = await fetch(
+                "/api/auth/profile",
+                {
+                    method: "PATCH",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                    },
+                    body: JSON.stringify(
+                        payload
+                    ),
+                }
+            );
 
-        if (updateError) {
-            setError(updateError.message);
-            return;
+            const data =
+                await response
+                    .json()
+                    .catch(() => null);
+
+            console.log(
+                "[ACCOUNT] Resposta:",
+                response.status,
+                data
+            );
+
+            if (!response.ok) {
+                setError(
+                    data?.error ??
+                    t("errorGeneric")
+                );
+
+                return;
+            }
+
+            await refreshProfile();
+
+            setSuccess(true);
+        } catch (error) {
+            console.error(
+                "[ACCOUNT] Erro:",
+                error
+            );
+
+            setError(
+                t("errorGeneric")
+            );
+        } finally {
+            setSaving(false);
         }
-
-        await refreshProfile();
-
-        setSuccess(true);
     }
 
     return {

@@ -149,6 +149,8 @@
     "errorCooldown": "Wait {seconds}s before trying again.",
     "errorInvalidEmail": "Enter a valid email address.",
     "errorNetwork": "Connection failed. Check your internet and try again.",
+    "errorGeneric": "Something went wrong. Please try again.",
+    "errorInvalidOrExpiredToken": "Invalid or expired link. Please request a new one.",
     "resendButton": "Resend confirmation email",
     "resendSuccess": "Email resent! Check your inbox (and spam folder).",
     "resendHint": "Didn't get it? You can resend after a few seconds.",

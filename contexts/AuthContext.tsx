@@ -7,354 +7,149 @@ import {
     useState,
 } from "react";
 
-import type {
-    Session,
-    User,
-} from "@supabase/supabase-js";
-
-import { supabaseBrowser } from "@/lib/supabase/client";
-
-import type {
-    ActiveMode,
-    Profile,
-} from "@/types/supabase";
+import type { ActiveMode, Profile } from "@/types/user";
 
 type AuthContextValue = {
-    user: User | null;
-    session: Session | null;
+    user: { id: string; email: string } | null;
     profile: Profile | null;
     loading: boolean;
     isStreamer: boolean;
     isStreamerMode: boolean;
     activeMode: ActiveMode;
     refreshProfile: () => Promise<void>;
-    setActiveMode: (
-        mode: ActiveMode
-    ) => Promise<boolean>;
+    setActiveMode: (mode: ActiveMode) => Promise<boolean>;
     enableStreamerMode: () => Promise<boolean>;
     signOut: () => Promise<void>;
 };
 
-const AuthContext =
-    createContext<AuthContextValue | undefined>(
-        undefined
-    );
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-async function fetchProfile(
-    userId: string
-): Promise<Profile | null> {
-    const {
-        data,
-        error,
-    } = await supabaseBrowser
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .maybeSingle();
+async function fetchSessionProfile(): Promise<Profile | null> {
+    try {
+        const response = await fetch("/api/auth/session", {
+            credentials: "include",
+        });
 
-    if (error) {
-        console.error(
-            "Erro ao buscar profile:",
-            error.message
-        );
+        if (!response.ok) {
+            return null;
+        }
 
+        const data = (await response.json()) as { profile: Profile | null };
+
+        return data.profile;
+    } catch {
         return null;
     }
-
-    return data;
 }
 
-async function syncSessionCookie(
-    accessToken: string | undefined
-) {
-    try {
-        if (accessToken) {
-            await fetch(
-                "/api/session/sync",
-                {
-                    method: "POST",
-                    credentials: "include",
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
-                }
-            );
-        } else {
-            await fetch(
-                "/api/session/sync",
-                {
-                    method: "DELETE",
-                    credentials: "include",
-                }
-            );
-        }
-    } catch {
-    }
-}
-
-export function AuthProvider({
-                                 children,
-                             }: {
-    children: React.ReactNode;
-}) {
-    const [
-        session,
-        setSession,
-    ] = useState<Session | null>(
-        null
-    );
-
-    const [
-        profile,
-        setProfile,
-    ] = useState<Profile | null>(
-        null
-    );
-
-    const [
-        loading,
-        setLoading,
-    ] = useState(true);
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+    const [profile, setProfile] = useState<Profile | null>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         let active = true;
 
-        async function init() {
-            const {
-                data: {
-                    session:
-                        currentSession,
-                },
-            } =
-                await supabaseBrowser.auth.getSession();
-
-            if (!active) {
-                return;
-            }
-
-            setSession(
-                currentSession
-            );
-
-            await syncSessionCookie(
-                currentSession?.access_token
-            );
-
-            if (
-                currentSession?.user
-            ) {
-                const currentProfile =
-                    await fetchProfile(
-                        currentSession.user.id
-                    );
-
-                if (active) {
-                    setProfile(
-                        currentProfile
-                    );
-                }
-            } else {
-                setProfile(null);
-            }
-
+        fetchSessionProfile().then((nextProfile) => {
             if (active) {
+                setProfile(nextProfile);
                 setLoading(false);
             }
-        }
-
-        init();
-
-        const {
-            data: {
-                subscription,
-            },
-        } =
-            supabaseBrowser.auth.onAuthStateChange(
-                async (
-                    _event,
-                    nextSession
-                ) => {
-                    setSession(
-                        nextSession
-                    );
-
-                    await syncSessionCookie(
-                        nextSession?.access_token
-                    );
-
-                    if (
-                        nextSession?.user
-                    ) {
-                        const nextProfile =
-                            await fetchProfile(
-                                nextSession.user.id
-                            );
-
-                        setProfile(
-                            nextProfile
-                        );
-                    } else {
-                        setProfile(null);
-                    }
-
-                    setLoading(false);
-                }
-            );
+        });
 
         return () => {
             active = false;
-
-            subscription.unsubscribe();
         };
     }, []);
 
     async function refreshProfile() {
-        if (!session?.user) {
-            return;
-        }
-
         const nextProfile =
-            await fetchProfile(
-                session.user.id
-            );
+            await fetchSessionProfile();
 
-        setProfile(
+        console.log(
+            "[AUTH] Perfil após refresh:",
             nextProfile
         );
+
+        setProfile(nextProfile);
     }
 
-    async function setActiveMode(
-        mode: ActiveMode
-    ): Promise<boolean> {
-        if (!session?.user) {
+    async function setActiveModeInternal(mode: ActiveMode): Promise<boolean> {
+        if (!profile) {
             return false;
         }
 
-        if (
-            mode === "streamer" &&
-            profile?.account_type !==
-            "streamer"
-        ) {
+        if (mode === "streamer" && profile.account_type !== "streamer") {
             return false;
         }
 
-        const {
-            data,
-            error,
-        } =
-            await supabaseBrowser
-                .from("profiles")
-                .update({
-                    active_mode: mode,
-                })
-                .eq(
-                    "id",
-                    session.user.id
-                )
-                .select("*")
-                .single();
+        const response = await fetch("/api/auth/profile", {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ active_mode: mode }),
+        });
 
-        if (error) {
-            console.error(
-                "Erro ao alterar modo:",
-                error.message
-            );
-
+        if (!response.ok) {
             return false;
         }
 
-        setProfile(data);
+        const data = (await response.json()) as { profile: Profile };
+
+        setProfile(data.profile);
 
         return true;
     }
 
-    async function enableStreamerMode(): Promise<boolean> {
-        if (!session?.user) {
+    async function enableStreamerModeInternal(): Promise<boolean> {
+        if (!profile) {
             return false;
         }
 
-        const {
-            data,
-            error,
-        } =
-            await supabaseBrowser
-                .from("profiles")
-                .update({
-                    account_type:
-                        "streamer",
-                    active_mode:
-                        "streamer",
-                })
-                .eq(
-                    "id",
-                    session.user.id
-                )
-                .select("*")
-                .single();
+        const response = await fetch("/api/auth/profile", {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enable_streamer_mode: true }),
+        });
 
-        if (error) {
-            console.error(
-                "Erro ao ativar modo streamer:",
-                error.message
-            );
-
+        if (!response.ok) {
             return false;
         }
 
-        setProfile(data);
+        const data = (await response.json()) as { profile: Profile };
+
+        setProfile(data.profile);
 
         return true;
     }
 
     async function signOut() {
-        await supabaseBrowser.auth.signOut();
+        await fetch("/api/auth/logout", {
+            method: "POST",
+            credentials: "include",
+        });
 
-        await syncSessionCookie(
-            undefined
-        );
-
-        setSession(null);
         setProfile(null);
     }
 
-    const isStreamer =
-        profile?.account_type ===
-        "streamer";
+    const isStreamer = profile?.account_type === "streamer";
+    const isStreamerMode = isStreamer && profile?.active_mode === "streamer";
+    const activeMode = profile?.active_mode ?? "user";
 
-    const isStreamerMode =
-        isStreamer &&
-        profile?.active_mode ===
-        "streamer";
-
-    const activeMode =
-        profile?.active_mode ??
-        "user";
+    const user = profile ? { id: profile.id, email: profile.email } : null;
 
     return (
         <AuthContext.Provider
             value={{
-                user:
-                    session?.user ??
-                    null,
-
-                session,
-
+                user,
                 profile,
-
                 loading,
-
                 isStreamer,
-
                 isStreamerMode,
-
                 activeMode,
-
                 refreshProfile,
-
-                setActiveMode,
-
-                enableStreamerMode,
-
+                setActiveMode: setActiveModeInternal,
+                enableStreamerMode: enableStreamerModeInternal,
                 signOut,
             }}
         >
@@ -364,15 +159,10 @@ export function AuthProvider({
 }
 
 export function useAuth() {
-    const context =
-        useContext(
-            AuthContext
-        );
+    const context = useContext(AuthContext);
 
     if (!context) {
-        throw new Error(
-            "useAuth precisa ser usado dentro de <AuthProvider>."
-        );
+        throw new Error("useAuth precisa ser usado dentro de <AuthProvider>.");
     }
 
     return context;

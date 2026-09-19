@@ -150,6 +150,8 @@
     "errorCooldown": "Espera {seconds}s antes de intentar de nuevo.",
     "errorInvalidEmail": "Ingresa un correo electrónico válido.",
     "errorNetwork": "Falló la conexión. Verifica tu internet e inténtalo de nuevo.",
+    "errorGeneric": "Algo salió mal. Inténtalo de nuevo.",
+    "errorInvalidOrExpiredToken": "Enlace inválido o expirado. Solicita uno nuevo.",
     "resendButton": "Reenviar correo de confirmación",
     "resendSuccess": "¡Correo reenviado! Revisa tu bandeja de entrada (y spam).",
     "resendHint": "¿No lo recibiste? Puedes reenviarlo en unos segundos.",

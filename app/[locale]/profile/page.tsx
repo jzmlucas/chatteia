@@ -74,7 +74,6 @@ export default function ProfilePage() {
     const {
         user,
         profile,
-        session,
         loading,
         isStreamer,
         isStreamerMode,
@@ -105,13 +104,6 @@ export default function ProfilePage() {
             return;
         }
 
-        if (!session?.access_token) {
-            setConnectionsLoading(false);
-            return;
-        }
-
-        const accessToken = session.access_token;
-
         let active = true;
 
         async function loadConnections() {
@@ -120,9 +112,6 @@ export default function ProfilePage() {
                     "/api/platforms/connections",
                     {
                         credentials: "include",
-                        headers: {
-                            Authorization: `Bearer ${accessToken}`,
-                        },
                     }
                 );
 
@@ -163,7 +152,6 @@ export default function ProfilePage() {
     }, [
         loading,
         user,
-        session?.access_token,
         isStreamer,
         isStreamerMode,
         router,
