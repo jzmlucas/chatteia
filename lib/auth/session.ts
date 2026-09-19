@@ -85,6 +85,7 @@ export async function validateSessionToken(
                 expires_at
             FROM sessions
             WHERE token_hash = $1
+            LIMIT 1
             `,
             [tokenHash]
         );
@@ -125,18 +126,9 @@ export async function validateSessionToken(
     const { rows: userRows } =
         await pool.query<UserRow>(
             `
-            SELECT
-                u.*,
-                p.username,
-                p.display_name,
-                p.account_type,
-                p.avatar_url,
-                p.bio,
-                p.active_mode
-            FROM users u
-            INNER JOIN profiles p
-                ON p.id = u.id
-            WHERE u.id = $1
+            SELECT *
+            FROM users
+            WHERE id = $1
             LIMIT 1
             `,
             [session.user_id]
