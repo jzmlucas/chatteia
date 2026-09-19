@@ -110,8 +110,8 @@ export async function exchangeKickCode({
     throw new Error(
       String(
         data.error ??
-          data.message ??
-          `KICK OAuth HTTP ${response.status}`
+        data.message ??
+        `KICK OAuth HTTP ${response.status}`
       )
     );
   }
@@ -164,8 +164,8 @@ export async function refreshKickAccessToken(
     throw new Error(
       String(
         data.error ??
-          data.message ??
-          `KICK refresh HTTP ${response.status}`
+        data.message ??
+        `KICK refresh HTTP ${response.status}`
       )
     );
   }
