@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 export function ChatNewMessagesButton({
                                           count,
                                           onClick,
@@ -7,6 +9,8 @@ export function ChatNewMessagesButton({
     count: number;
     onClick: () => void;
 }) {
+    const t = useTranslations("chat");
+
     if (count <= 0) {
         return null;
     }
@@ -38,10 +42,7 @@ export function ChatNewMessagesButton({
                 focus:ring-[#f76f9c]
             "
         >
-            +{" "}
-            {count === 1
-                ? "1 mensagem"
-                : `${count} mensagens`}
+            {t("newMessagesButton", { count })}
         </button>
     );
 }

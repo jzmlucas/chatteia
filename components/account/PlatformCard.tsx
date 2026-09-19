@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { PlatformMeta } from "./platformMeta";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 type ConnectionInfo =
     | {
@@ -27,6 +27,7 @@ export function PlatformCard({
                                  onDisconnect,
                              }: PlatformCardProps) {
     const locale = useLocale();
+    const t = useTranslations("connections");
     const [loading, setLoading] = useState(false);
 
     const { Icon, name, color, available, connectUrl } = meta;
@@ -67,11 +68,11 @@ export function PlatformCard({
                     </span>
                 ) : !available ? (
                     <span className="text-xs italic text-zinc-600">
-                        Em breve
+                        {t("comingSoon")}
                     </span>
                 ) : (
                     <span className="text-xs text-zinc-500">
-                        Não conectado
+                        {t("notConnected")}
                     </span>
                 )}
             </div>
@@ -82,16 +83,16 @@ export function PlatformCard({
                     <>
                         <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
                             <span className="h-1.5 w-1.5 animate-pulse bg-emerald-400" />
-                            Conectado
+                            {t("connectedLabel")}
                         </span>
 
                         <button
                             onClick={handleDisconnect}
                             disabled={loading}
                             className="text-xs text-zinc-500 transition-colors hover:text-red-400 disabled:opacity-40"
-                            title="Desconectar"
+                            title={t("disconnectTitle")}
                         >
-                            {loading ? "…" : "Sair"}
+                            {loading ? "…" : t("disconnectButtonLabel")}
                         </button>
                     </>
                 )}
@@ -101,7 +102,7 @@ export function PlatformCard({
                         href={`${connectUrl}?locale=${locale}`}
                         className="px-3 py-1.5 text-xs font-semibold transition-colors"
                     >
-                        Conectar
+                        {t("connectButtonLabel")}
                     </a>
                 )}
             </div>

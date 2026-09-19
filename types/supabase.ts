@@ -1,10 +1,13 @@
 export type AccountType = "user" | "streamer";
 
+export type ActiveMode = "user" | "streamer";
+
 export type Profile = {
     id: string;
     username: string;
     display_name: string | null;
     account_type: AccountType;
+    active_mode: ActiveMode;
     avatar_url: string | null;
     bio: string | null;
     created_at: string;
@@ -16,6 +19,7 @@ export type ProfileInsert = {
     username: string;
     display_name?: string | null;
     account_type?: AccountType;
+    active_mode?: ActiveMode;
     avatar_url?: string | null;
     bio?: string | null;
 };
@@ -24,6 +28,7 @@ export type ProfileUpdate = {
     username?: string;
     display_name?: string | null;
     account_type?: AccountType;
+    active_mode?: ActiveMode;
     avatar_url?: string | null;
     bio?: string | null;
 };
@@ -49,6 +54,7 @@ export type Database = {
 
         Enums: {
             account_type: AccountType;
+            active_mode: ActiveMode;
         };
 
         CompositeTypes: {

@@ -166,7 +166,7 @@ export function MultiChatBoard({ targets, feedMessages }: MultiChatBoardProps) {
                                     );
                                 })}
                                 {group.targetKeys.length === 0 && (
-                                    <div className="text-xs text-zinc-600 px-2 italic">Arraste chats para cá</div>
+                                    <div className="text-xs text-zinc-600 px-2 italic">{t("dragChatsHere")}</div>
                                 )}
                             </div>
 

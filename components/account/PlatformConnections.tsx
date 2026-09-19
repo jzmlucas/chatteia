@@ -7,6 +7,8 @@ import {
     useState,
 } from "react";
 
+import { useTranslations } from "next-intl";
+
 import { PlatformCard } from "./PlatformCard";
 import { PLATFORM_META } from "./platformMeta";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +28,7 @@ type ConnectionsMap = Record<string, ConnectionStatus>;
 
 export function PlatformConnections() {
     const { session } = useAuth();
+    const t = useTranslations("connections");
 
     const [connections, setConnections] =
         useState<ConnectionsMap | null>(null);
@@ -116,12 +119,11 @@ export function PlatformConnections() {
             >
                 <div>
                     <h2 className="text-sm font-semibold text-zinc-100">
-                        Conecte suas plataformas
+                        {t("title")}
                     </h2>
 
                     <p className="mt-1 text-xs text-zinc-500">
-                        Vincule suas contas para habilitar moderação e
-                        ferramentas avançadas.
+                        {t("subtitle")}
                     </p>
                 </div>
 
@@ -139,7 +141,7 @@ export function PlatformConnections() {
                 <div className="mt-4">
                     {error && (
                         <p className="mb-3 border border-red-900/50 bg-red-950/30 px-3 py-2 text-xs text-red-400">
-                            Não foi possível carregar o status das conexões.
+                            {t("loadError")}
                         </p>
                     )}
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import {
     ObsChatSettings as ObsChatSettingsType,
 } from "@/types/chat/obs";
@@ -17,17 +19,19 @@ export function ObsChatSettings({
     updateSettings,
     resetSettings,
 }: Props) {
+    const t = useTranslations("obsSettings");
+
     return (
         <div className="space-y-6">
             {/* APARÊNCIA */}
             <section>
                 <div className="mb-4 border-b border-white/10 pb-3">
                     <h2 className="text-xs font-semibold uppercase tracking-wider text-white/70">
-                        Aparência
+                        {t("appearanceTitle")}
                     </h2>
 
                     <p className="mt-1 text-[11px] text-white/30">
-                        Personalize a aparência das mensagens.
+                        {t("appearanceSubtitle")}
                     </p>
                 </div>
 
@@ -35,7 +39,7 @@ export function ObsChatSettings({
                     {/* Fonte */}
                     <label className="space-y-1.5">
                         <span className="block text-xs text-white/60">
-                            Fonte
+                            {t("fontLabel")}
                         </span>
 
                         <select
@@ -74,7 +78,7 @@ export function ObsChatSettings({
                         {/* Tamanho */}
                         <label className="space-y-1.5">
                             <span className="block text-xs text-white/60">
-                                Tamanho
+                                {t("sizeLabel")}
                             </span>
 
                             <input
@@ -100,7 +104,7 @@ export function ObsChatSettings({
                         {/* Peso */}
                         <label className="space-y-1.5">
                             <span className="block text-xs text-white/60">
-                                Peso
+                                {t("weightLabel")}
                             </span>
 
                             <select
@@ -119,19 +123,19 @@ export function ObsChatSettings({
                                 className="h-9 w-full border border-white/10 bg-white/[0.03] px-3 text-xs text-white outline-none focus:border-white/20"
                             >
                                 <option value={400}>
-                                    Normal
+                                    {t("weightNormal")}
                                 </option>
 
                                 <option value={500}>
-                                    Medium
+                                    {t("weightMedium")}
                                 </option>
 
                                 <option value={600}>
-                                    Semibold
+                                    {t("weightSemibold")}
                                 </option>
 
                                 <option value={700}>
-                                    Bold
+                                    {t("weightBold")}
                                 </option>
                             </select>
                         </label>
@@ -141,7 +145,7 @@ export function ObsChatSettings({
                         {/* Espaçamento */}
                         <label className="space-y-1.5">
                             <span className="block text-xs text-white/60">
-                                Espaçamento
+                                {t("spacingLabel")}
                             </span>
 
                             <input
@@ -167,7 +171,7 @@ export function ObsChatSettings({
                         {/* Arredondamento */}
                         <label className="space-y-1.5">
                             <span className="block text-xs text-white/60">
-                                Arredondamento
+                                {t("radiusLabel")}
                             </span>
 
                             <input
@@ -194,7 +198,7 @@ export function ObsChatSettings({
                     {/* Máximo de mensagens */}
                     <label className="space-y-1.5">
                         <span className="block text-xs text-white/60">
-                            Máximo de mensagens
+                            {t("maxMessagesLabel")}
                         </span>
 
                         <input
@@ -223,18 +227,18 @@ export function ObsChatSettings({
             <section>
                 <div className="mb-4 border-b border-white/10 pb-3">
                     <h2 className="text-xs font-semibold uppercase tracking-wider text-white/70">
-                        Cores
+                        {t("colorsTitle")}
                     </h2>
 
                     <p className="mt-1 text-[11px] text-white/30">
-                        Defina as cores do chat.
+                        {t("colorsSubtitle")}
                     </p>
                 </div>
 
                 <div className="grid gap-4">
                     {/* Nome */}
                     <ColorInput
-                        label="Cor do nome"
+                        label={t("usernameColorLabel")}
                         value={
                             settings.usernameColor
                         }
@@ -248,7 +252,7 @@ export function ObsChatSettings({
 
                     {/* Mensagem */}
                     <ColorInput
-                        label="Cor da mensagem"
+                        label={t("messageColorLabel")}
                         value={
                             settings.messageColor
                         }
@@ -262,7 +266,7 @@ export function ObsChatSettings({
 
                     {/* Fundo */}
                     <ColorInput
-                        label="Fundo da mensagem"
+                        label={t("backgroundColorLabel")}
                         value={
                             settings.messageBackgroundColor
                         }
@@ -278,7 +282,7 @@ export function ObsChatSettings({
                     <div>
                         <div className="mb-2 flex items-center justify-between">
                             <span className="text-xs text-white/60">
-                                Opacidade do fundo
+                                {t("backgroundOpacityLabel")}
                             </span>
 
                             <span className="text-[10px] text-white/30">
@@ -315,13 +319,13 @@ export function ObsChatSettings({
             <section>
                 <div className="mb-4 border-b border-white/10 pb-3">
                     <h2 className="text-xs font-semibold uppercase tracking-wider text-white/70">
-                        Elementos
+                        {t("elementsTitle")}
                     </h2>
                 </div>
 
                 <div className="divide-y divide-white/5 border-y border-white/5">
                     <Toggle
-                        label="Mostrar avatar"
+                        label={t("showAvatarLabel")}
                         checked={
                             settings.showAvatar
                         }
@@ -334,7 +338,7 @@ export function ObsChatSettings({
                     />
 
                     <Toggle
-                        label="Mostrar badges"
+                        label={t("showBadgesLabel")}
                         checked={
                             settings.showBadges
                         }
@@ -347,7 +351,7 @@ export function ObsChatSettings({
                     />
 
                     <Toggle
-                        label="Mostrar horário"
+                        label={t("showTimestampLabel")}
                         checked={
                             settings.showTimestamp
                         }
@@ -360,7 +364,7 @@ export function ObsChatSettings({
                     />
 
                     <Toggle
-                        label="Mostrar nome do usuário"
+                        label={t("showUsernameLabel")}
                         checked={
                             settings.showUsername
                         }
@@ -373,7 +377,7 @@ export function ObsChatSettings({
                     />
 
                     <Toggle
-                        label="Fundo nas mensagens"
+                        label={t("messageBackgroundLabel")}
                         checked={
                             settings.messageBackground
                         }
@@ -391,20 +395,19 @@ export function ObsChatSettings({
             <section>
                 <div className="mb-4 border-b border-white/10 pb-3">
                     <h2 className="text-xs font-semibold uppercase tracking-wider text-white/70">
-                        Comportamento
+                        {t("behaviorTitle")}
                     </h2>
 
                     <p className="mt-1 text-[11px] text-white/30">
-                        Controle o movimento automático das
-                        mensagens.
+                        {t("behaviorSubtitle")}
                     </p>
                 </div>
 
                 <div className="space-y-4">
                     {/* Movimento automático */}
                     <Toggle
-                        label="Movimento automático"
-                        description="As mensagens se deslocam e desaparecem do overlay."
+                        label={t("autoScrollLabel")}
+                        description={t("autoScrollDescription")}
                         checked={
                             settings.autoScroll
                         }
@@ -420,14 +423,14 @@ export function ObsChatSettings({
                     <div>
                         <div className="mb-2">
                             <span className="text-xs text-white/60">
-                                Direção
+                                {t("directionLabel")}
                             </span>
                         </div>
 
                         <div className="grid grid-cols-4 border border-white/10">
                             <DirectionButton
                                 label="↑"
-                                title="Subir"
+                                title={t("directionUp")}
                                 active={
                                     settings.animationDirection ===
                                     "up"
@@ -442,7 +445,7 @@ export function ObsChatSettings({
 
                             <DirectionButton
                                 label="↓"
-                                title="Descer"
+                                title={t("directionDown")}
                                 active={
                                     settings.animationDirection ===
                                     "down"
@@ -457,7 +460,7 @@ export function ObsChatSettings({
 
                             <DirectionButton
                                 label="←"
-                                title="Esquerda"
+                                title={t("directionLeft")}
                                 active={
                                     settings.animationDirection ===
                                     "left"
@@ -472,7 +475,7 @@ export function ObsChatSettings({
 
                             <DirectionButton
                                 label="→"
-                                title="Direita"
+                                title={t("directionRight")}
                                 active={
                                     settings.animationDirection ===
                                     "right"
@@ -491,19 +494,20 @@ export function ObsChatSettings({
                     <div>
                         <div className="mb-2 flex items-center justify-between">
                             <span className="text-xs text-white/60">
-                                Velocidade
+                                {t("speedLabel")}
                             </span>
 
                             <span className="text-[10px] text-white/30">
                                 {getSpeedLabel(
-                                    settings.animationSpeed
+                                    settings.animationSpeed,
+                                    t
                                 )}
                             </span>
                         </div>
 
                         <div className="grid grid-cols-3 border border-white/10">
                             <SpeedButton
-                                label="Lenta"
+                                label={t("speedSlow")}
                                 active={
                                     settings.animationSpeed ===
                                     "slow"
@@ -517,7 +521,7 @@ export function ObsChatSettings({
                             />
 
                             <SpeedButton
-                                label="Normal"
+                                label={t("speedNormal")}
                                 active={
                                     settings.animationSpeed ===
                                     "normal"
@@ -531,7 +535,7 @@ export function ObsChatSettings({
                             />
 
                             <SpeedButton
-                                label="Rápida"
+                                label={t("speedFast")}
                                 active={
                                     settings.animationSpeed ===
                                     "fast"
@@ -554,7 +558,7 @@ export function ObsChatSettings({
                 onClick={resetSettings}
                 className="h-9 border border-white/10 px-4 text-xs text-white/50 transition hover:bg-white/[0.04] hover:text-white"
             >
-                Restaurar padrão
+                {t("resetButton")}
             </button>
         </div>
     );
@@ -729,17 +733,18 @@ function SpeedButton({
 /* -------------------------------------------------------------------------- */
 
 function getSpeedLabel(
-    speed: ObsChatSettingsType["animationSpeed"]
+    speed: ObsChatSettingsType["animationSpeed"],
+    t: ReturnType<typeof useTranslations>
 ): string {
     switch (speed) {
         case "slow":
-            return "Lenta";
+            return t("speedSlow");
 
         case "fast":
-            return "Rápida";
+            return t("speedFast");
 
         case "normal":
         default:
-            return "Normal";
+            return t("speedNormal");
     }
 }

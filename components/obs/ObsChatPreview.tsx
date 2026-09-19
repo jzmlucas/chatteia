@@ -3,9 +3,12 @@
 import {
     useCallback,
     useEffect,
+    useMemo,
     useRef,
     useState,
 } from "react";
+
+import { useTranslations } from "next-intl";
 
 import type {
     ObsChatSettings,
@@ -21,55 +24,26 @@ type PreviewMessage = {
     color: string;
 };
 
+const PREVIEW_USERNAMES_COLORS: {
+    username: string;
+    color: string;
+}[] = [
+    { username: "turbao8", color: "#9147ff" },
+    { username: "Viewer123", color: "#00d084" },
+    { username: "AnaLive", color: "#ff6b9d" },
+    { username: "PlayerOne", color: "#00b8ff" },
+    { username: "turbao8", color: "#9147ff" },
+    { username: "ViewerPro", color: "#f5c542" },
+    { username: "Luna", color: "#e879f9" },
+    { username: "Carlos", color: "#22d3ee" },
+];
+
 type AnimatedMessage = {
     id: string;
     data: PreviewMessage;
     x: number;
     y: number;
 };
-
-const PREVIEW_MESSAGES: PreviewMessage[] = [
-    {
-        username: "turbao8",
-        message: "Salve chat! 👋",
-        color: "#9147ff",
-    },
-    {
-        username: "Viewer123",
-        message: "Essa live está muito boa!",
-        color: "#00d084",
-    },
-    {
-        username: "AnaLive",
-        message: "kkkkkkkkkkkk",
-        color: "#ff6b9d",
-    },
-    {
-        username: "PlayerOne",
-        message: "Qual vai ser a próxima partida?",
-        color: "#00b8ff",
-    },
-    {
-        username: "turbao8",
-        message: "Daqui a pouco eu vejo isso.",
-        color: "#9147ff",
-    },
-    {
-        username: "ViewerPro",
-        message: "Muito bom!",
-        color: "#f5c542",
-    },
-    {
-        username: "Luna",
-        message: "Boa live 🔥",
-        color: "#e879f9",
-    },
-    {
-        username: "Carlos",
-        message: "Cheguei agora!",
-        color: "#22d3ee",
-    },
-];
 
 const MESSAGE_INTERVALS = {
     slow: 2400,
@@ -99,6 +73,21 @@ function createUniqueId(): string {
 export function ObsChatPreview({
     settings,
 }: Props) {
+    const t = useTranslations("obsPreview");
+
+    const previewMessages = useMemo<PreviewMessage[]>(() => {
+        const texts = t.raw("messages") as string[];
+
+        return PREVIEW_USERNAMES_COLORS.map(
+            (item, index) => ({
+                username: item.username,
+                color: item.color,
+                message:
+                    texts[index % texts.length] ?? "",
+            })
+        );
+    }, [t]);
+
     const containerRef =
         useRef<HTMLDivElement | null>(null);
 
@@ -212,9 +201,9 @@ export function ObsChatPreview({
             }
 
             const source =
-                PREVIEW_MESSAGES[
+                previewMessages[
                     messageIndexRef.current %
-                        PREVIEW_MESSAGES.length
+                        previewMessages.length
                 ];
 
             messageIndexRef.current += 1;
@@ -245,6 +234,7 @@ export function ObsChatPreview({
             containerSize,
             settings.animationDirection,
             settings.maxMessages,
+            previewMessages,
         ]);
 
     /*
@@ -473,11 +463,11 @@ export function ObsChatPreview({
                     settings.maxMessages,
                     1
                 ),
-                PREVIEW_MESSAGES.length
+                previewMessages.length
             );
 
         const staticMessages =
-            PREVIEW_MESSAGES
+            previewMessages
                 .slice(-count)
                 .map(
                     (data) => ({
@@ -495,6 +485,7 @@ export function ObsChatPreview({
     }, [
         settings.autoScroll,
         settings.maxMessages,
+        previewMessages,
     ]);
 
     /*

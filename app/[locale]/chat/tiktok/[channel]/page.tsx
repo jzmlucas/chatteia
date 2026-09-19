@@ -394,12 +394,12 @@ export default function TikTokChatPage() {
                     <div className="shrink-0 border-b border-red-900 bg-red-950/60 px-4 py-2 text-sm text-red-300">
 
                         <div className="font-medium">
-                            Erro ao conectar ao TikTok
+                            {t("tiktokConnectErrorTitle")}
                         </div>
 
                         <div className="mt-1 text-red-400">
                             {error ||
-                                "Não foi possível conectar ao chat do TikTok."}
+                                t("tiktokConnectErrorDefault")}
                         </div>
 
                     </div>

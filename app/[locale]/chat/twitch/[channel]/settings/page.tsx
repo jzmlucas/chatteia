@@ -2,6 +2,8 @@
 
 import { useParams } from "next/navigation";
 
+import { useTranslations } from "next-intl";
+
 import {
     useObsChatSettings,
 } from "@/hooks/chat/useObsChatSettings";
@@ -15,6 +17,8 @@ import {
 } from "@/components/obs/ObsChatPreview";
 
 export default function ObsChatSettingsPage() {
+    const t = useTranslations("obsSettings");
+
     const params = useParams<{
         locale: string;
         channel: string;
@@ -51,7 +55,7 @@ export default function ObsChatSettingsPage() {
                         onClick={resetSettings}
                         className="text-xs text-white/40 transition hover:text-white"
                     >
-                        Restaurar padrão
+                        {t("resetButton")}
                     </button>
                 </header>
 
@@ -62,11 +66,11 @@ export default function ObsChatSettingsPage() {
                         <div className="h-full overflow-y-auto px-5 py-4">
                             <div className="mb-4">
                                 <h2 className="text-xs font-semibold uppercase tracking-wider text-white/70">
-                                    Aparência
+                                    {t("appearanceTitle")}
                                 </h2>
 
                                 <p className="mt-1 text-[11px] text-white/30">
-                                    Personalize o overlay do chat.
+                                    {t("pageAppearanceHint")}
                                 </p>
                             </div>
 
@@ -83,11 +87,11 @@ export default function ObsChatSettingsPage() {
                         <div className="flex h-full flex-col">
                             <div className="flex h-10 shrink-0 items-center justify-between border-b border-white/10 px-5">
                                 <span className="text-xs font-medium text-white/60">
-                                    Preview
+                                    {t("previewLabel")}
                                 </span>
 
                                 <span className="text-[10px] uppercase tracking-widest text-white/20">
-                                    tempo real
+                                    {t("previewRealtimeLabel")}
                                 </span>
                             </div>
 
@@ -138,7 +142,7 @@ export default function ObsChatSettingsPage() {
                         }}
                         className="h-8 shrink-0 bg-white px-4 text-xs font-medium text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-30"
                     >
-                        Copiar URL
+                        {t("copyUrlButton")}
                     </button>
                 </footer>
             </div>

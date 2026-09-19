@@ -393,12 +393,12 @@ export default function YouTubeChatPage() {
         <div className="shrink-0 border-b border-red-900 bg-red-950/60 px-4 py-2 text-sm text-red-300">
 
           <div className="font-medium">
-            Erro ao conectar ao YouTube
+            {t("youtubeConnectErrorTitle")}
           </div>
 
           <div className="mt-1 text-red-400">
             {statusDetail ||
-              "Não foi possível consultar o chat do YouTube."}
+              t("youtubeConnectErrorDefault")}
           </div>
 
         </div>
