@@ -6,6 +6,7 @@ COPY package.json package-lock.json* ./
 
 RUN npm ci
 
+
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -29,6 +30,8 @@ ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG TIKTOK_WORKER_URL
 ARG TIKTOK_WORKER_SECRET
+ARG DATABASE_URL
+ARG DATABASE_SSL
 ARG GIT_SHA
 
 ENV TWITCH_CLIENT_ID=$TWITCH_CLIENT_ID
@@ -46,10 +49,13 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 ENV TIKTOK_WORKER_URL=$TIKTOK_WORKER_URL
 ENV TIKTOK_WORKER_SECRET=$TIKTOK_WORKER_SECRET
+ENV DATABASE_URL=$DATABASE_URL
+ENV DATABASE_SSL=$DATABASE_SSL
 ENV GIT_SHA=$GIT_SHA
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
+
 
 FROM node:20-alpine AS runner
 
@@ -64,7 +70,9 @@ RUN addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
+
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
