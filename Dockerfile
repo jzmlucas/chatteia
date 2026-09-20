@@ -66,17 +66,22 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=80
 ENV HOSTNAME=0.0.0.0
 
-RUN addgroup --system --gid 1001 nodejs \
+RUN apk add --no-cache postgresql-client \
+    && addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/postgres ./postgres
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+COPY --chown=nextjs:nodejs docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 USER nextjs
 
 EXPOSE 80
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "server.js"]

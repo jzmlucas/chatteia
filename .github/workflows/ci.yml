@@ -7,25 +7,46 @@ on:
     branches: [main]
 
 jobs:
-  build-and-lint:
-    name: Lint, Typecheck & Build
+  validate:
+    name: Lint, typecheck and production build
     runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/chatteia
+      DATABASE_SSL: "false"
+      TWITCH_CLIENT_ID: test-client-id
+      TWITCH_CLIENT_SECRET: test-client-secret
+      KICK_CLIENT_ID: test-kick-client-id
+      KICK_CLIENT_SECRET: test-kick-client-secret
+      KICK_REDIRECT_URI: http://localhost:3000/api/platforms/kick/auth/callback
+      KICK_API_URL: https://api.kick.com/public/v1
+      GOOGLE_CLIENT_ID: test-google-client-id
+      GOOGLE_CLIENT_SECRET: test-google-client-secret
+      YOUTUBE_API_KEY: test-youtube-key
+      SMTP_HOST: localhost
+      SMTP_PORT: "1025"
+      SMTP_USER: test-user
+      SMTP_PASSWORD: test-pass
+      SMTP_FROM: Chatteia <no-reply@chatteia.local>
+      NEXT_PUBLIC_TIKTOK_WORKER_URL: http://localhost:4000
+      TIKTOK_WORKER_URL: http://localhost:4000
+      TIKTOK_WORKER_SECRET: test-worker-secret
 
     steps:
-      - name: Checkout do código
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      - name: Instalar dependências
+      - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
 
-      - name: Build de produção
+      - name: Production build
         run: npm run build

@@ -146,7 +146,7 @@
     "errorEmailTaken": "Esse e-mail já está cadastrado.",
     "errorInvalidCredentials": "E-mail ou senha inválidos.",
     "errorEmailNotConfirmed": "Confirme seu e-mail antes de entrar.",
-    "errorRateLimit": "Limite de envio de e-mails do Supabase atingido. Aguarde alguns minutos e tente novamente (ou configure um SMTP próprio — veja o README).",
+    "errorRateLimit": "O limite de envio de e-mails foi atingido. Aguarde alguns minutos e tente novamente, ou configure um SMTP próprio.",
     "errorCooldown": "Aguarde {seconds}s antes de tentar novamente.",
     "errorInvalidEmail": "Digite um e-mail válido.",
     "errorNetwork": "Falha de conexão. Verifique sua internet e tente novamente.",

@@ -1,345 +1,433 @@
 # Chatteia
 
-Agregador multi-plataforma de chat ao vivo (Twitch, Kick, YouTube, TikTok)
-com autenticação própria (e-mail/senha + login social) rodando 100% em
-**Postgres puro + Node**, sem depender de Supabase ou de nenhum serviço
-gerenciado de terceiros para dados/autenticação.
+[![Next.js](https://img.shields.io/badge/Next.js-16.3.3-000000?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5.4-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-4169E1?logo=postgresql)](https://www.postgresql.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-> Este README documenta o estado atual do projeto **pós-migração do
-> Supabase**. Ambiente-alvo: **Postgres e o app Node/Next.js rodando
-> juntos na mesma VPS**.
-
----
+Agregador multi-plataforma de chat ao vivo (Twitch, Kick, YouTube, TikTok) com autenticação própria (e-mail/senha + login social) rodando 100% em Postgres puro + Node.
 
 ## Índice
 
-1. [Stack](#stack)
-2. [Estrutura completa do projeto](#estrutura-completa-do-projeto)
-3. [Variáveis de ambiente](#variáveis-de-ambiente)
-4. [Banco de dados](#banco-de-dados)
-5. [Deploy na VPS (Postgres + Node juntos)](#deploy-na-vps-postgres--node-juntos)
-6. [Worker do TikTok (processo separado)](#worker-do-tiktok-processo-separado)
-7. [Arquivos obsoletos — pode apagar](#arquivos-obsoletos--pode-apagar)
-8. [Scripts úteis](#scripts-úteis)
+1. [Visão geral](#visão-geral)
+2. [Stack](#stack)
+3. [Funcionalidades](#funcionalidades)
+4. [Arquitetura](#arquitetura)
+5. [Requisitos](#requisitos)
+6. [Variáveis de ambiente](#variáveis-de-ambiente)
+7. [Banco de dados](#banco-de-dados)
+8. [Instalação local](#instalação-local)
+9. [Self-hosting em produção](#self-hosting-em-produção)
+10. [Docker](#docker)
+11. [TikTok worker](#tiktok-worker)
+12. [Estrutura do projeto](#estrutura-do-projeto)
+13. [Dicas de segurança](#dicas-de-segurança)
+
+---
+
+## Visão geral
+
+O Chatteia foi pensado para funcionar como uma plataforma autônoma, com:
+
+- autenticação própria com e-mail, senha e sessão em cookie
+- login OAuth para Google e Twitch
+- recuperação de senha e confirmação por e-mail
+- visualização de chat de canais individuais
+- multi-chat para combinar vários canais em uma tela
+- overlay para OBS
+- suporte a Twitch, Kick, YouTube e TikTok
+
+O objetivo principal é permitir que alguém hospede o sistema em sua própria infraestrutura e tenha um painel de chat com pouca dependência de serviços externos.
 
 ---
 
 ## Stack
 
-| Camada | Tecnologia |
-|---|---|
-| Framework | Next.js 15 (App Router) |
-| Linguagem | TypeScript |
-| Estilo | Tailwind CSS |
-| i18n | next-intl (pt-br, en, es, ru) |
-| Banco de dados | **PostgreSQL puro** (via `pg`) |
-| Autenticação | Implementação própria — bcrypt + sessão em cookie httpOnly |
-| E-mail transacional | `nodemailer` (SMTP configurável) |
-| Login social | OAuth 2.0 genérico — Google e Twitch prontos |
-| Chat Twitch | IRC anônimo (WebSocket direto do navegador) |
-| Chat Kick | Webhooks + assinatura via API oficial |
-| Chat YouTube | YouTube Data API (polling) |
-| Chat TikTok | Worker Node externo (não-oficial) + SSE |
+- [Next.js](https://nextjs.org/) 16
+- [TypeScript](https://www.typescriptlang.org/)
+- [React](https://react.dev/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [PostgreSQL](https://www.postgresql.org/)
+- [pg](https://node-postgres.com/)
+- [bcryptjs](https://github.com/dcodeIO/bcrypt.js)
+- [nodemailer](https://nodemailer.com/)
+- [next-intl](https://next-intl-docs.vercel.app/)
 
 ---
 
-## Estrutura completa do projeto
+## Funcionalidades
 
-```
-Chatteia/
-├── Dockerfile                          # build multi-stage (precisa atualizar ARGs — ver seção Deploy)
-├── .dockerignore
-├── .env.local                          # nunca commitar — ver seção Variáveis de ambiente
-├── middleware.ts                       # só roteamento i18n, sem lógica de auth
-├── next.config.js
-├── tailwind.config.js
-├── tsconfig.json
-│
-├── postgres/
-│   └── migrations/
-│       └── 0001_init.sql               # schema completo (users, sessions, tokens, oauth, platform_connections, kick_tokens)
-│
-├── types/
-│   ├── user.ts                         # UserRow, Profile — tipos do usuário/autenticação
-│   └── chat/
-│       └── obs.ts                      # tipos de configuração do overlay OBS
-│
-├── i18n/
-│   ├── config.ts                       # locales suportados
-│   ├── navigation.ts                   # Link/useRouter/redirect com prefixo de idioma
-│   └── request.ts
-│
-├── messages/                           # traduções (pt-br, en, es, ru)
-│   ├── pt-br.json
-│   ├── en.json
-│   ├── es.json
-│   └── ru.json
-│
-├── lib/
-│   ├── db/
-│   │   └── pool.ts                     # pool de conexão `pg` (singleton)
-│   │
-│   ├── auth/                           # autenticação própria (substitui Supabase Auth)
-│   │   ├── password.ts                 # hash/verify (bcryptjs)
-│   │   ├── tokens.ts                   # geração/hash de tokens opacos
-│   │   ├── session.ts                  # criação/validação/expiração de sessão
-│   │   ├── users.ts                    # acesso à tabela `users`
-│   │   ├── errors.ts                   # mapeia códigos de erro → traduções
-│   │   ├── getSessionUser.ts           # helper usado pelas rotas de API (Kick, connections)
-│   │   └── oauth/
-│   │       ├── types.ts                # interface genérica de provedor OAuth
-│   │       ├── google.ts               # provedor Google
-│   │       ├── twitch.ts               # provedor Twitch (login social — reaproveita TWITCH_CLIENT_ID)
-│   │       └── index.ts                # registro de provedores ativos
-│   │
-│   ├── email/
-│   │   ├── sendEmail.ts                # SMTP com fallback pro console (sem SMTP configurado)
-│   │   └── templates.ts                # e-mails de verificação e reset de senha
-│   │
-│   ├── chat/
-│   │   ├── types.ts                    # ChatPlatform, UnifiedChatMessage
-│   │   ├── targets.ts                  # parsing/normalização de "twitch:canal" etc.
-│   │   ├── normalizeChannel.ts         # normalização de input da home (por plataforma)
-│   │   ├── multiChat.ts                # tipos e helpers do multi-chat
-│   │   └── chatteiaRoom.ts             # helpers de sala/apelido (chat nativo — não usado hoje)
-│   │
-│   ├── repositories/
-│   │   └── platformConnections/
-│   │       ├── types.ts                # interface do repositório (independente de banco)
-│   │       ├── postgres.ts             # implementação ativa (Postgres via `pg`)
-│   │       └── index.ts                # exporta a instância ativa
-│   │
-│   └── platforms/
-│       ├── twitch/
-│       │   ├── irc.ts                  # barrel de compatibilidade
-│       │   ├── ircParsers.ts           # parsers puros do protocolo IRC
-│       │   ├── ircClient.ts            # classe TwitchChatClient (WebSocket + reconexão)
-│       │   └── adapter.ts, badges.ts, emotes.ts, types.ts
-│       │
-│       ├── kick/
-│       │   ├── oauth.ts                # OAuth da Kick (autorizar canal p/ webhooks)
-│       │   ├── webhook.ts              # verificação de assinatura (chave pública fixa da Kick)
-│       │   ├── subscriptions.ts        # assinatura de eventos via API da Kick
-│       │   ├── token-store.ts          # tokens por broadcaster (Postgres via `pg`)
-│       │   ├── bus.ts                  # fan-out em memória (webhook → SSE)
-│       │   └── authorized-channels.ts, adapter.ts, types.ts, user.ts
-│       │
-│       ├── youtube/
-│       │   └── api.ts, adapter.ts, types.ts
-│       │
-│       └── tiktok/
-│           ├── types.ts, adapter.ts
-│           └── bus.ts                  # fan-out em memória (webhook → SSE) — ver nota na seção do worker
-│
-├── contexts/
-│   └── AuthContext.tsx                 # estado de auth no client (fetch /api/auth/session)
-│
-├── hooks/
-│   ├── auth/
-│   │   ├── useLoginForm.ts             # POST /api/auth/login
-│   │   ├── useRegisterForm.ts          # POST /api/auth/register
-│   │   ├── useResendConfirmation.ts    # POST /api/auth/resend-verification
-│   │   ├── useAccountForm.ts           # PATCH /api/auth/profile
-│   │   └── useEmailCooldown.ts         # rate-limit client-side (sem dependência externa)
-│   │
-│   ├── chat/
-│   │   ├── useMultiChatState.ts        # orquestra Twitch+Kick+YouTube+TikTok no multi-chat
-│   │   ├── useChatActivity.ts, useChatAutoScroll.ts, useMultiChatLayout.ts
-│   │   ├── useObsChatSettings.ts       # configurações do overlay via querystring
-│   │   └── useObsTransparentBackground.ts
-│   │
-│   ├── home/
-│   │   └── useHomeForm.ts              # formulário da home (single/multi-chat)
-│   │
-│   └── platforms/
-│       ├── twitch/  (useTwitchChannel, useTwitchMultiChat, useTwitchConnectionManager, useTwitchChannelInfo)
-│       ├── kick/    (useKickChannel, useKickMultiChat)
-│       ├── youtube/ (useYouTubeChannel, useYouTubeMultiChat)
-│       └── tiktok/  (useTiktokChannel, useTikTokMultiChat) — conectam DIRETO no worker externo (ver seção do worker)
-│
-├── components/
-│   ├── auth/       (LoginForm, RegisterForm, AccountPanel, AuthGuard, UserMenu, ResendConfirmationEmail)
-│   ├── account/    (PlatformConnections, PlatformCard, platformMeta)
-│   ├── home/       (HomeChatForm, SettingsMenu)
-│   ├── chat/       (ChatFeed, ChatMessage, ChatMessageContent, MultiChatHeader, ChatNewMessagesButton, CopyObsLinkButton, layout/MultiChatBoard)
-│   ├── obs/        (ObsChatPreview, ObsChatSettings)
-│   ├── layout/     (GlobalHeader, ProfileMenu, AvatarIcon, HomeLogoLink, MaskedEmail)
-│   └── i18n/       (LanguageSwitcher)
-│
-├── app/
-│   ├── [locale]/
-│   │   ├── page.tsx                    # home
-│   │   ├── login/page.tsx
-│   │   ├── register/page.tsx
-│   │   ├── account/page.tsx
-│   │   ├── profile/page.tsx
-│   │   ├── kick/connect/page.tsx       # fluxo de autorização de streamer da Kick
-│   │   ├── chat/
-│   │   │   ├── twitch/[channel]/page.tsx  (+ /settings)
-│   │   │   ├── kick/[channel]/page.tsx
-│   │   │   ├── youtube/[channel]/page.tsx
-│   │   │   ├── tiktok/[channel]/page.tsx
-│   │   │   ├── multi-chat/page.tsx
-│   │   │   └── [channel]/page.tsx      # redirect de compatibilidade (Twitch sem prefixo → /chat/twitch/…)
-│   │   └── obs/
-│   │       ├── [channel]/page.tsx      # overlay OBS single-canal (Twitch)
-│   │       └── multi-chat/page.tsx     # overlay OBS multi-chat
-│   │
-│   └── api/
-│       ├── auth/                       # toda a autenticação própria
-│       │   ├── register, login, logout, session, profile
-│       │   ├── verify-email, resend-verification
-│       │   ├── forgot-password, reset-password
-│       │   └── oauth/[provider]/{authorize,callback}
-│       │
-│       └── platforms/
-│           ├── connections/            # conexões de plataforma do usuário logado
-│           ├── kick/                   # oauth, webhook, subscriptions, channels, me, stream (SSE)
-│           ├── twitch/                 # badges, emotes, streams (dados auxiliares — chat em si é direto por WebSocket)
-│           ├── youtube/chat/           # polling da API do YouTube
-│           └── tiktok/                 # webhook, watch, stream — ver nota abaixo
-│
-└── public/
-    └── chatteia*.png                   # ícones/favicon
-```
+### Autenticação
 
-> **Nota sobre `lib/platforms/tiktok/bus.ts` e `app/api/platforms/tiktok/{webhook,watch,stream}`:**
-> esses arquivos implementam um proxy (worker → webhook → SSE via Next.js).
-> Os hooks atuais (`useTiktokChannel.ts`, `useTikTokMultiChat.ts`) **não
-> usam mais esse caminho** — eles conectam **direto** no worker via
-> `NEXT_PUBLIC_TIKTOK_WORKER_URL` (`GET {worker}/stream?channel=...`).
-> As rotas antigas ficaram como código morto; podem ser removidas com
-> segurança, ou reaproveitadas se você preferir voltar a proxiar pelo
-> Next.js no futuro (ver seção do worker).
+- cadastro com usuário, e-mail e senha
+- confirmação de e-mail
+- login com sessão em cookie
+- reset de senha
+- login social com Google e Twitch
+
+### Chat
+
+- Twitch via IRC/WebSocket
+- Kick via OAuth + webhooks + subscriptions
+- YouTube via API de chat
+- TikTok via worker externo e SSE
+
+### Multi-chat e OBS
+
+- tela de multi-chat com vários canais simultâneos
+- pages de canal por plataforma
+- overlay com layout compatível com OBS
+- links de overlay gerados na aplicação
+
+---
+
+## Arquitetura
+
+A aplicação usa uma arquitetura simples e direta:
+
+- Frontend: Next.js App Router
+- Backend: rotas de API dentro do próprio app
+- Banco: PostgreSQL
+- Sessões: armazenadas no banco com token opaco
+- Integrações externas: Kick, Twitch, YouTube e TikTok
+
+A autenticação foi implementada internamente, sem depender de Supabase. O banco é a fonte principal de dados do sistema.
+
+---
+
+## Requisitos
+
+Para rodar localmente ou self-hosted, você precisa de:
+
+- Node.js 20+
+- npm
+- PostgreSQL 14+
+- domínio opcional para produção
+- SMTP configurado para e-mails em produção
+- acesso às chaves OAuth das plataformas desejadas
+
+Se for rodar com Docker, também será útil ter:
+
+- Docker
+- Docker Buildx
 
 ---
 
 ## Variáveis de ambiente
 
-Arquivo `.env.local` (nunca commitar). Tabela completa — **todas** as
-variáveis usadas em algum ponto do código:
+Crie um arquivo `.env.local` na raiz do projeto com as variáveis abaixo.
 
-### Core / aplicação
+### Variáveis obrigatórias
 
-| Variável | Obrigatória | Descrição |
-|---|---|---|
-| `NODE_ENV` | Automática | `production` em build/deploy, `development` local |
-
-### Banco de dados (Postgres puro)
-
-| Variável | Obrigatória | Descrição |
-|---|---|---|
-| `DATABASE_URL` | Sim | String de conexão, ex: `postgresql://usuario:senha@localhost:5432/chatteia` |
-| `DATABASE_SSL` | Não | `"true"` se seu Postgres exigir SSL. Deixe vazio/`false` para Postgres local na própria VPS. |
-
-### Autenticação e sessão
-
-Não precisa de nenhuma variável de "segredo de JWT" — a sessão é um
-token aleatório opaco guardado (com hash) na tabela `sessions`, não um
-JWT assinado. Nada a configurar aqui além do `DATABASE_URL` acima.
-
-### E-mail (verificação de cadastro e reset de senha)
-
-| Variável | Obrigatória | Descrição |
-|---|---|---|
-| `SMTP_HOST` | Não* | Host do seu servidor SMTP |
-| `SMTP_PORT` | Não* | Porta (587 STARTTLS, 465 SSL) |
-| `SMTP_USER` | Não* | Usuário SMTP |
-| `SMTP_PASSWORD` | Não* | Senha/API key SMTP |
-| `SMTP_FROM` | Não | Remetente exibido, ex: "Chatteia <no-reply@seudominio.com>" |
-
-\* Sem essas 4 configuradas, os e-mails são impressos no console do
-processo Node (`lib/email/sendEmail.ts`) — útil para testes locais, mas
-configure antes de ir pra produção de verdade, senão ninguém recebe o
-e-mail de confirmação de cadastro.
-
-### Login social (OAuth) — opcional, ative só o que for usar
-
-| Variável | Obrigatória | Descrição |
-|---|---|---|
-| `GOOGLE_CLIENT_ID` | Não | Client ID do Google Cloud Console |
-| `GOOGLE_CLIENT_SECRET` | Não | Client Secret do Google |
-| `TWITCH_CLIENT_ID` | Já existe* | Reaproveitado do app da Twitch abaixo |
-| `TWITCH_CLIENT_SECRET` | Já existe* | Reaproveitado do app da Twitch abaixo |
-
-\* O mesmo app da Twitch já usado para outras integrações serve para
-login social — só é preciso registrar mais um redirect URI nele (ver
-seção de Deploy).
-
-Redirect URIs a registrar nos consoles de cada provedor:
-```
-{SEU_DOMINIO}/api/auth/oauth/google/callback
-{SEU_DOMINIO}/api/auth/oauth/twitch/callback
+```env
+DATABASE_URL=postgresql://usuario:senha@localhost:5432/chatteia
 ```
 
-### Twitch (dados auxiliares — o chat em si é IRC anônimo, sem OAuth)
+### Variáveis opcionais, mas importantes na prática
 
-| Variável | Obrigatória | Descrição |
-|---|---|---|
-| `TWITCH_CLIENT_ID` | Sim | Usado por `lib/platforms/twitch` (badges/emotes/streams) e login social |
-| `TWITCH_CLIENT_SECRET` | Sim | Idem |
-
-### Kick
-
-| Variável | Obrigatória | Descrição |
-|---|---|---|
-| `KICK_CLIENT_ID` | Sim | App OAuth da Kick |
-| `KICK_CLIENT_SECRET` | Sim | Idem |
-| `KICK_REDIRECT_URI` | Sim | Ex: `{SEU_DOMINIO}/api/platforms/kick/auth/callback` |
-| `KICK_API_URL` | Não | Default: `https://api.kick.com/public/v1` |
-
-### YouTube
-
-| Variável | Obrigatória | Descrição |
-|---|---|---|
-| `YOUTUBE_API_KEY` | Sim | Chave da YouTube Data API v3 |
-
-### TikTok (worker externo)
-
-| Variável | Obrigatória | Onde é usada |
-|---|---|---|
-| `NEXT_PUBLIC_TIKTOK_WORKER_URL` | Sim | Client-side — o navegador conecta direto nela (`hooks/platforms/tiktok/*`). Precisa ser a URL pública do worker (ex: `https://tiktok-worker.seudominio.com`), com HTTPS se o site também for HTTPS (mixed content é bloqueado pelo navegador). |
-| `TIKTOK_WORKER_URL` | Só se usar as rotas antigas | Server-side, usado por `app/api/platforms/tiktok/{watch,stream}/route.ts` (código morto — ver nota da seção anterior) |
-| `TIKTOK_WORKER_SECRET` | Só se usar as rotas antigas | Idem |
-
-### Removidas — não usar mais (resquícios do Supabase)
-
-```
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-SUPABASE_URL
-SUPABASE_PUBLISHABLE_KEY
-SUPABASE_SECRET_KEY
-SUPABASE_JWKS_URL
-```
-
-### `.env.local` completo de referência
-
-```bash
-# --- Banco de dados ---
-DATABASE_URL=postgresql://chatteia:senha@localhost:5432/chatteia
+```env
+NODE_ENV=development
 DATABASE_SSL=false
 
-# --- E-mail (SMTP) ---
+TWITCH_CLIENT_ID=
+TWITCH_CLIENT_SECRET=
+
+KICK_CLIENT_ID=
+KICK_CLIENT_SECRET=
+KICK_REDIRECT_URI=http://localhost:3000/api/platforms/kick/auth/callback
+KICK_API_URL=https://api.kick.com/public/v1
+
+YOUTUBE_API_KEY=
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
 SMTP_HOST=
 SMTP_PORT=
 SMTP_USER=
 SMTP_PASSWORD=
-SMTP_FROM="Chatteia <no-reply@seudominio.com>"
+SMTP_FROM=Chatteia <no-reply@seu-dominio.com>
 
-# --- Login social ---
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
+NEXT_PUBLIC_TIKTOK_WORKER_URL=
+TIKTOK_WORKER_URL=
+TIKTOK_WORKER_SECRET=
+```
 
-# --- Twitch (auxiliar + login social) ---
-TWITCH_CLIENT_ID=
-TWITCH_CLIENT_SECRET=
+### O que cada uma faz
 
-# --- Kick ---
-KICK_CLIENT_ID=
-KICK_CLIENT_SECRET=
-KICK_REDIRECT_URI=https://seudominio.com/api/platforms/kick/auth/callback
-KICK_API_URL=https://api.kick.com/public/v1
+| Variável | Necessária | Descrição |
+|---|---:|---|
+| `DATABASE_URL` | Sim | String de conexão do PostgreSQL. O app não funciona sem ela. |
+| `DATABASE_SSL` | Não | Use `true` quando o banco exigir SSL. |
+| `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | Não para leitura simples, sim para OAuth e outras APIs | Necessárias para autenticação e algumas APIs da Twitch. |
+| `KICK_CLIENT_ID` / `KICK_CLIENT_SECRET` | Não para leitura simples, sim para integrações KICK | Necessárias para OAuth e webhooks da Kick. |
+| `KICK_REDIRECT_URI` | Sim para KICK | URL de callback da OAuth da Kick. |
+| `YOUTUBE_API_KEY` | Não para funcionamento básico, sim para YouTube | Necessária para buscar chat do YouTube. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Não para leitura, sim para OAuth do Google | Necessárias para login social do Google. |
+| `SMTP_*` | Não, mas recomendado em produção | Habilita envio real de e-mails de verificação e reset. |
+| `NEXT_PUBLIC_TIKTOK_WORKER_URL` | Recomendado | URL pública do worker do TikTok. |
+| `TIKTOK_WORKER_URL` | Recomendado | URL interna/real do worker, usada pelo backend. |
+| `TIKTOK_WORKER_SECRET` | Recomendado | Segredo para autenticar chamadas do worker. |
+
+> Importante: se `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` e `SMTP_PASSWORD` não estiverem configurados, o app imprime e-mails no console em vez de enviá-los.
+
+---
+
+## Banco de dados
+
+O schema principal fica em:
+
+```text
+postgres/migrations/0001_init.sql
+```
+
+Ele cria as tabelas principais:
+
+- `users`
+- `sessions`
+- `email_verification_tokens`
+- `password_reset_tokens`
+- `oauth_accounts`
+- `platform_connections`
+- `kick_tokens`
+
+### Aplicando a migração
+
+```bash
+psql "$DATABASE_URL" -f postgres/migrations/0001_init.sql
+```
+
+Ou, se você estiver usando um container Postgres local:
+
+```bash
+docker exec -i <container_postgres> psql -U <usuario> -d <database> < postgres/migrations/0001_init.sql
+```
+
+---
+
+## Instalação local
+
+### 1. Instale as dependências
+
+```bash
+npm install
+```
+
+### 2. Configure o ambiente
+
+Crie o arquivo `.env.local` com as variáveis mencionadas acima.
+
+### 3. Crie o banco e aplique o schema
+
+```bash
+createdb chatteia
+psql "$DATABASE_URL" -f postgres/migrations/0001_init.sql
+```
+
+### 4. Inicie a aplicação
+
+```bash
+npm run dev
+```
+
+A aplicação fica em:
+
+```text
+http://localhost:3000
+```
+
+---
+
+## Self-hosting em produção
+
+### Recomendação
+
+Use uma VPS ou um host Linux com:
+
+- Node.js 20+
+- PostgreSQL 14+
+- processo do app em execução com contêiner, PM2 ou systemd
+- proxy reverso e TLS gerenciados pelo seu painel de deploy, como EasyPanel
+
+Se você estiver no EasyPanel, ele normalmente cuida do serviço de rede, proxy e HTTPS por você. Neste caso, o app pode ficar exposto apenas no container interno e o painel resolve a conexão externa.
+
+### Build de produção
+
+```bash
+npm run build
+npm run start
+```
+
+Se você quiser rodar em produção via Node direto, normalmente o processo fica em um serviço do sistema.
+
+### Exemplo de execução em produção
+
+```bash
+NODE_ENV=production npm run start
+```
+
+---
+
+## Docker
+
+O projeto inclui um `Dockerfile` multi-stage para build da aplicação e também um `docker-compose.yml` para subir a app e o banco juntos.
+
+### docker-compose
+
+```bash
+docker compose up -d --build
+```
+
+Esse arquivo monta:
+
+- um container PostgreSQL
+- um container da aplicação Next.js
+- a conexão interna automática entre os serviços via nome do serviço `db`
+
+Exemplo de configuração usada no compose:
+
+```yaml
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: chatteia
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/chatteia?sslmode=disable
+      DATABASE_SSL: "false"
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+```
+
+### Build da imagem manual
+
+```bash
+docker build -t chatteia .
+```
+
+### Rodar a imagem manualmente
+
+```bash
+docker run --rm -p 3000:3000 \
+  -e DATABASE_URL="postgresql://usuario:senha@host:5432/chatteia" \
+  -e DATABASE_SSL=false \
+  -e HOSTNAME=0.0.0.0 \
+  -e PORT=3000 \
+  --name chatteia \
+  chatteia
+```
+
+> Se você usa EasyPanel, normalmente não precisa configurar Nginx dentro do app. O painel cuida da exposição externa e do proxy.
+
+> Em produção, prefira passar as variáveis por secrets ou environment do runtime em vez de deixar valores no Dockerfile.
+
+---
+
+## TikTok worker
+
+O TikTok não usa o mesmo fluxo dos outros chats. O projeto espera um worker externo separado que exponha eventos em tempo real por SSE.
+
+Fluxo típico:
+
+1. o worker recebe eventos do TikTok
+2. o worker expõe stream via endpoint HTTP
+3. o front-end do Chatteia conecta ao worker com `NEXT_PUBLIC_TIKTOK_WORKER_URL`
+4. o cliente recebe mensagens em tempo real
+
+### Variáveis relacionadas
+
+```env
+NEXT_PUBLIC_TIKTOK_WORKER_URL=https://seu-worker.example.com
+TIKTOK_WORKER_URL=https://seu-worker.example.com
+TIKTOK_WORKER_SECRET=seu-segredo-forte
+```
+
+Se o worker não estiver disponível, o chat do TikTok não funciona corretamente.
+
+---
+
+## Estrutura do projeto
+
+```text
+Chatteia/
+├── app/
+│   ├── [locale]/
+│   ├── api/
+│   └── ...
+├── components/
+├── contexts/
+├── hooks/
+├── i18n/
+├── lib/
+│   ├── auth/
+│   ├── chat/
+│   ├── db/
+│   ├── email/
+│   ├── platforms/
+│   └── repositories/
+├── messages/
+├── postgres/
+│   └── migrations/
+├── public/
+├── types/
+├── .env.local
+├── .gitignore
+├── Dockerfile
+├── middleware.ts
+├── next.config.js
+├── package.json
+├── postcss.config.cjs
+├── tailwind.config.js
+├── tsconfig.json
+└── README.md
+```
+
+---
+
+## Dicas de segurança
+
+Antes de publicar o projeto:
+
+- nunca commite `.env`, `.env.local`, `.env.production` ou segredos
+- nunca exponha `DATABASE_URL` em logs ou stack traces
+- use HTTPS em produção
+- configure SMTP para e-mails reais
+- use uma senha forte para o banco e para o worker do TikTok
+- mantenha `KICK_REDIRECT_URI` e URLs públicas consistentes com o domínio real
+
+Arquivos que normalmente não devem entrar no GitHub:
+
+```text
+.env
+.env.local
+.env.production
+.env.*
+node_modules/
+.next/
+out/
+dist/
+.vscode/
+.idea/
+postgres/data/
+.kick-tokens.json
+```
+
+---
+
+## Observações finais
+
+Este projeto foi desenvolvido para funcionar como uma base de self-hosting real: Next.js + PostgreSQL + autenticação própria + integrações de chat em tempo real. A parte mais crítica é a configuração correta do banco e das chaves de integração, principalmente Twitch, Kick, YouTube e TikTok.
+
+Se você seguir o setup acima, o sistema fica pronto para ser hosteado e operado de forma independente.
+
 
 # --- YouTube ---
 YOUTUBE_API_KEY=
