@@ -392,6 +392,25 @@ Chatteia/
 
 ---
 
+## Cobrança (assinatura do streamer)
+
+O modo streamer pode exigir assinatura via Stripe. Tudo vem **desligado** por padrão (`BILLING_ENFORCED=false`).
+
+**Como funciona:** `POST /api/billing/checkout` cria uma Checkout Session; o acesso só é liberado pelo webhook (`/api/billing/webhook`), que grava o estado em `subscriptions`. A regra de acesso fica em `lib/billing/entitlements.ts` (`active`, `trialing` e `past_due` dentro de 3 dias de tolerância).
+
+**Configuração**
+
+1. No Stripe (modo teste), crie um Produto com preço recorrente e copie o `price_...` para `STRIPE_PRICE_STREAMER_MONTHLY`.
+2. Configure o Portal do Cliente em Settings > Billing > Customer portal.
+3. Crie um webhook para `https://SEU_DOMINIO/api/billing/webhook` com os eventos `customer.subscription.created`, `.updated`, `.deleted`, `.paused` e `.resumed`, e copie o segredo para `STRIPE_WEBHOOK_SECRET`.
+4. Defina `APP_URL` e `STRIPE_SECRET_KEY`.
+5. Local: `stripe listen --forward-to localhost:3000/api/billing/webhook`.
+6. Teste o fluxo com cartão `4242 4242 4242 4242` e só então ligue `BILLING_ENFORCED=true`.
+
+**Cortesias:** veja os exemplos de SQL no fim de `postgres/migrations/0002_billing.sql` (inclusive para manter os streamers atuais).
+
+**Migrations:** o container aplica `postgres/migrations/*.sql` pendentes ao iniciar (`postgres/migrate.sh`).
+
 ## Dicas de segurança
 
 Antes de publicar o projeto:

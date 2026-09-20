@@ -27,6 +27,8 @@ import type {
     ObsChatSettings,
 } from "@/types/chat/obs";
 
+import { CHAT_CONFIG } from "@/config/chat";
+
 export type { FeedMessage };
 
 type ChatActivity = ReturnType<
@@ -123,7 +125,12 @@ function DefaultChatFeed({
                 onScroll={
                     handleScroll
                 }
-                className="h-full overflow-y-auto bg-twitch-dark px-3 py-3 space-y-1.5"
+                className={[
+                    "h-full overflow-y-auto px-3 py-3 space-y-1.5",
+                    CHAT_CONFIG.useMessageBackground
+                        ? "bg-zinc-950"
+                        : "bg-twitch-dark",
+                ].join(" ")}
             >
                 {messages.length === 0 &&
                     emptyLabel && (
@@ -192,20 +199,16 @@ function ObsChatFeed({
             new Set()
         );
 
-    const [
-        containerSize,
-        setContainerSize,
-    ] = useState({
-        width: 0,
-        height: 0,
-    });
+    const [animatedMessages, setAnimatedMessages] =
+        useState<ObsAnimatedMessage[]>(
+            []
+        );
 
-    const [
-        animatedMessages,
-        setAnimatedMessages,
-    ] = useState<
-        ObsAnimatedMessage[]
-    >([]);
+    const [containerSize, setContainerSize] =
+        useState({
+            width: 0,
+            height: 0,
+        });
 
     useEffect(() => {
         const element =
@@ -218,9 +221,9 @@ function ObsChatFeed({
         const updateSize = () => {
             setContainerSize({
                 width:
-                element.clientWidth,
+                    element.clientWidth,
                 height:
-                element.clientHeight,
+                    element.clientHeight,
             });
         };
 
@@ -231,68 +234,14 @@ function ObsChatFeed({
                 updateSize
             );
 
-        observer.observe(element);
+        observer.observe(
+            element
+        );
 
         return () => {
             observer.disconnect();
         };
     }, []);
-
-    useEffect(() => {
-        if (obsSettings.autoScroll) {
-            return;
-        }
-
-        const visible =
-            messages.slice(
-                -Math.max(
-                    obsSettings.maxMessages,
-                    1
-                )
-            );
-
-        setAnimatedMessages(
-            visible.map(
-                (
-                    message,
-                    index
-                ) => ({
-                    id:
-                        getMessageKey(
-                            message
-                        ),
-
-                    message,
-
-                    x: 16,
-
-                    y:
-                        containerSize.height -
-                        60 -
-                        (visible.length -
-                            1 -
-                            index) *
-                        (obsSettings.fontSize +
-                            obsSettings.messageSpacing +
-                            20),
-                })
-            )
-        );
-
-        previousMessageIdsRef.current =
-            new Set(
-                visible.map(
-                    getMessageKey
-                )
-            );
-    }, [
-        obsSettings.autoScroll,
-        obsSettings.maxMessages,
-        obsSettings.fontSize,
-        obsSettings.messageSpacing,
-        containerSize.height,
-        messages,
-    ]);
 
     useEffect(() => {
         if (!obsSettings.autoScroll) {
@@ -384,7 +333,7 @@ function ObsChatFeed({
         const speed =
             MOVEMENT_SPEEDS[
                 obsSettings.animationSpeed
-                ];
+            ];
 
         let lastTime:
             | number
@@ -576,7 +525,7 @@ function createObsMessage(
 
     switch (
         settings.animationDirection
-        ) {
+    ) {
         case "up":
             return {
                 id,

@@ -180,12 +180,52 @@ export function HomeChatForm({
 
                 <button
                     type="submit"
-                    className="min-h-12 bg-[#F55376] px-6 py-3 font-semibold text-white transition-colors hover:bg-[#e33361]"
+                    className="
+                        group relative min-h-12 overflow-hidden
+                        bg-[#F55376] px-6 py-3
+                        font-semibold text-white
+                        transition-all duration-300 ease-out
+                        hover:-translate-y-0.5
+                        hover:bg-[#ff6687]
+                        hover:shadow-[0_0_25px_rgba(245,83,118,0.45)]
+                        active:translate-y-0
+                        active:scale-[0.99]
+                    "
                 >
-                    {multi
-                        ? t("multiChatSubmit")
-                        : t("submit")}
+                    {/* Brilho que atravessa o botão */}
+                    <span
+                        className="
+                            absolute inset-0
+                            -translate-x-full
+                            bg-gradient-to-r
+                            from-transparent
+                            via-white/20
+                            to-transparent
+                            transition-transform duration-700
+                            group-hover:translate-x-full
+                        "
+                    />
+
+                    {/* Glow vivo */}
+                    <span
+                        className="
+                            absolute inset-0
+                            opacity-0
+                            bg-[#F55376]
+                            blur-xl
+                            transition-opacity duration-300
+                            group-hover:animate-pulse
+                            group-hover:opacity-60
+                        "
+                    />
+
+                    <span className="relative z-10">
+                        {multi
+                            ? t("multiChatSubmit")
+                            : t("submit")}
+                    </span>
                 </button>
+
 
                 <a
                     href={`/api/platforms/kick/auth/authorize?locale=${encodeURIComponent(

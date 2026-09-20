@@ -12,6 +12,8 @@ import type {
     ObsChatSettings,
 } from "@/types/chat/obs";
 
+import { CHAT_CONFIG } from "@/config/chat";
+
 export type FeedMessage =
     UnifiedChatMessage & {
     channelLabel?: string;
@@ -30,6 +32,10 @@ export function ChatMessage({
     activity?: number;
 }) {
     const isObs = !!obsSettings;
+
+    const useMessageBackground =
+        !isObs &&
+        CHAT_CONFIG.useMessageBackground;
 
     const usernameColor =
         isObs
@@ -238,7 +244,9 @@ export function ChatMessage({
                     "leading-relaxed",
                     isObs
                         ? "w-full"
-                        : "gap-1 text-sm",
+                        : useMessageBackground
+                            ? "w-fit max-w-[80%] gap-1 text-sm rounded-2xl border border-zinc-800/80 bg-zinc-900/80 px-3 py-2 shadow-sm backdrop-blur-sm"
+                            : "gap-1 text-sm",
                     animationClass,
                 ].join(" ")}
                 style={
@@ -246,19 +254,27 @@ export function ChatMessage({
                         ? {
                             fontFamily:
                             obsSettings.fontFamily,
+
                             fontSize:
                                 `${obsSettings.fontSize}px`,
+
                             fontWeight:
                             obsSettings.fontWeight,
-                            gap: "0.25rem",
+
+                            gap:
+                                "0.25rem",
+
                             padding:
                                 obsSettings.messageBackground
                                     ? "8px 12px"
                                     : "0",
+
                             borderRadius:
                                 "0",
+
                             backgroundColor:
-                            backgroundColor,
+                                backgroundColor,
+
                             marginBottom:
                                 "0",
                         }
@@ -271,6 +287,7 @@ export function ChatMessage({
                         style={{
                             backgroundColor:
                                 `${message.channelColor ?? "#F55376"}22`,
+
                             color:
                                 message.channelColor ??
                                 "#F55376",
@@ -342,8 +359,10 @@ export function ChatMessage({
                             style={{
                                 color:
                                 activityStyle.color,
+
                                 textShadow:
                                 activityStyle.textShadow,
+
                                 filter:
                                 activityStyle.filter,
                             }}
@@ -355,13 +374,18 @@ export function ChatMessage({
                                         style={{
                                             inset:
                                                 "-3px -6px",
+
                                             background:
                                                 "radial-gradient(ellipse, rgba(255, 106, 0, 0.45) 0%, rgba(255, 61, 0, 0.2) 42%, transparent 75%)",
+
                                             filter:
                                                 "blur(5px)",
+
                                             opacity:
                                             activityStyle.fireOpacity,
-                                            zIndex: -2,
+
+                                            zIndex:
+                                                -2,
                                         }}
                                     />
 
@@ -466,8 +490,12 @@ function ChatFire({
             viewBox="-30 0 160 70"
             preserveAspectRatio="none"
             style={{
-                height: `${height}px`,
-                width: `${width}px`,
+                height:
+                    `${height}px`,
+
+                width:
+                    `${width}px`,
+
                 opacity,
             }}
             aria-hidden="true"
@@ -664,13 +692,16 @@ function getActivityStyle(
 
     return {
         color: finalColor,
+
         textShadow: [
             `0 0 ${inner}px rgba(255, 61, 0, ${0.5 * intensity})`,
             `0 0 ${outer}px rgba(255, 106, 0, ${0.65 * intensity})`,
             `0 0 ${outer * 1.7}px rgba(255, 179, 0, ${0.3 * intensity})`,
         ].join(", "),
+
         filter:
             `brightness(${1 + intensity * 0.2})`,
+
         fireOpacity:
             String(
                 0.35 +
@@ -747,10 +778,12 @@ function hexToRgb(
             normalized.substring(0, 2),
             16
         ),
+
         g: parseInt(
             normalized.substring(2, 4),
             16
         ),
+
         b: parseInt(
             normalized.substring(4, 6),
             16
@@ -794,9 +827,13 @@ function hexToRgba(
             16
         );
 
-    return `rgba(${red}, ${green}, ${blue}, ${
+    return `rgba(0, 0, 0, ${
         opacity / 100
-    })`;
+    })`
+        .replace(
+            "rgba(0, 0, 0,",
+            `rgba(${red}, ${green}, ${blue},`
+        );
 }
 
 function getAnimationClass(

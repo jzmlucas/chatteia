@@ -36,6 +36,7 @@ export function ProfileMenu() {
     const t = useTranslations("auth");
     const tLang = useTranslations("languageSwitcher");
     const tSettings = useTranslations("settings");
+    const tBilling = useTranslations("billing");
 
     const currentLocale =
         useLocale() as AppLocale;
@@ -57,6 +58,7 @@ export function ProfileMenu() {
         activeMode,
         setActiveMode,
         enableStreamerMode,
+        billing,
     } = useAuth();
 
     const [open, setOpen] =
@@ -162,12 +164,18 @@ export function ProfileMenu() {
         });
 
         if (!isStreamer) {
-            const success =
+            const result =
                 await enableStreamerMode();
 
             setChangingMode(false);
 
-            if (success) {
+            if (result === "subscription_required") {
+                setOpen(false);
+                router.push("/billing");
+                return;
+            }
+
+            if (result === "ok") {
                 setOpen(false);
             }
 
@@ -179,14 +187,20 @@ export function ProfileMenu() {
                 ? "user"
                 : "streamer";
 
-        const success =
+        const result =
             await setActiveMode(
                 nextMode
             );
 
         setChangingMode(false);
 
-        if (success) {
+        if (result === "subscription_required") {
+            setOpen(false);
+            router.push("/billing");
+            return;
+        }
+
+        if (result === "ok") {
             setOpen(false);
         }
     }
@@ -320,6 +334,21 @@ export function ProfileMenu() {
                                             {t("navStreamerHub")}
                                         </Link>
                                     )}
+
+                                    {isStreamer &&
+                                        billing?.enforced && (
+                                            <Link
+                                                href="/billing"
+                                                onClick={() =>
+                                                    setOpen(
+                                                        false
+                                                    )
+                                                }
+                                                className="block px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white"
+                                            >
+                                                {tBilling("navLabel")}
+                                            </Link>
+                                        )}
                                 </div>
 
                                 <div className="border-b border-twitch-border px-4 py-3">

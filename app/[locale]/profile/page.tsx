@@ -78,7 +78,11 @@ export default function ProfilePage() {
         isStreamer,
         isStreamerMode,
         activeMode,
+        billing,
+        hasStreamerAccess,
     } = useAuth();
+
+    const tBilling = useTranslations("billing");
 
     const [connections, setConnections] =
         useState<ConnectionsResponse | null>(null);
@@ -185,6 +189,22 @@ export default function ProfilePage() {
                         <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-zinc-500">
                             {tp("streamerModeHint")}
                         </p>
+
+                        {billing?.enforced &&
+                            !hasStreamerAccess && (
+                                <>
+                                    <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-zinc-400">
+                                        {tBilling("gateHint")}
+                                    </p>
+
+                                    <Link
+                                        href="/billing"
+                                        className="mt-6 mr-3 inline-flex border border-[#F55376] bg-[#F55376] px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                                    >
+                                        {tBilling("gateCta")}
+                                    </Link>
+                                </>
+                            )}
 
                         <Link
                             href="/account"

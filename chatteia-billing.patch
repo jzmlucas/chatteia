@@ -1,0 +1,2609 @@
+diff --git a/.env.example b/.env.example
+index ead51a8..4987346 100644
+--- a/.env.example
++++ b/.env.example
+@@ -5,6 +5,10 @@ NODE_ENV=development
+ PORT=3000
+ HOSTNAME=0.0.0.0
+ 
++# URL pública do app (sem barra final). OBRIGATÓRIA em produção: é usada nas
++# URLs de retorno do Stripe.
++APP_URL=http://localhost:3000
++
+ GOOGLE_CLIENT_ID=
+ GOOGLE_CLIENT_SECRET=
+ TWITCH_CLIENT_ID=
+@@ -33,3 +37,14 @@ SUPABASE_URL=
+ SUPABASE_PUBLISHABLE_KEY=
+ SUPABASE_SECRET_KEY=
+ SUPABASE_JWKS_URL=
++
++# --- Cobrança (Stripe) — lidas em runtime, NUNCA como build-arg do Docker ---
++# false (padrão): modo streamer liberado para todos. true: exige assinatura.
++BILLING_ENFORCED=false
++STRIPE_SECRET_KEY=
++STRIPE_WEBHOOK_SECRET=
++STRIPE_PRICE_STREAMER_MONTHLY=
++# Opcional: habilita o seletor mensal/anual na página de assinatura.
++STRIPE_PRICE_STREAMER_YEARLY=
++# Opcional: dias de teste grátis (0 a 90).
++STRIPE_TRIAL_DAYS=0
+diff --git a/README.md b/README.md
+index d3bd01e..3cac883 100644
+--- a/README.md
++++ b/README.md
+@@ -392,6 +392,25 @@ Chatteia/
+ 
+ ---
+ 
++## Cobrança (assinatura do streamer)
++
++O modo streamer pode exigir assinatura via Stripe. Tudo vem **desligado** por padrão (`BILLING_ENFORCED=false`).
++
++**Como funciona:** `POST /api/billing/checkout` cria uma Checkout Session; o acesso só é liberado pelo webhook (`/api/billing/webhook`), que grava o estado em `subscriptions`. A regra de acesso fica em `lib/billing/entitlements.ts` (`active`, `trialing` e `past_due` dentro de 3 dias de tolerância).
++
++**Configuração**
++
++1. No Stripe (modo teste), crie um Produto com preço recorrente e copie o `price_...` para `STRIPE_PRICE_STREAMER_MONTHLY`.
++2. Configure o Portal do Cliente em Settings > Billing > Customer portal.
++3. Crie um webhook para `https://SEU_DOMINIO/api/billing/webhook` com os eventos `customer.subscription.created`, `.updated`, `.deleted`, `.paused` e `.resumed`, e copie o segredo para `STRIPE_WEBHOOK_SECRET`.
++4. Defina `APP_URL` e `STRIPE_SECRET_KEY`.
++5. Local: `stripe listen --forward-to localhost:3000/api/billing/webhook`.
++6. Teste o fluxo com cartão `4242 4242 4242 4242` e só então ligue `BILLING_ENFORCED=true`.
++
++**Cortesias:** veja os exemplos de SQL no fim de `postgres/migrations/0002_billing.sql` (inclusive para manter os streamers atuais).
++
++**Migrations:** o container aplica `postgres/migrations/*.sql` pendentes ao iniciar (`postgres/migrate.sh`).
++
+ ## Dicas de segurança
+ 
+ Antes de publicar o projeto:
+diff --git a/app/[locale]/billing/page.tsx b/app/[locale]/billing/page.tsx
+new file mode 100644
+index 0000000..8580d91
+--- /dev/null
++++ b/app/[locale]/billing/page.tsx
+@@ -0,0 +1,505 @@
++"use client";
++
++import { Suspense, useEffect, useState } from "react";
++
++import { useSearchParams } from "next/navigation";
++import { useLocale, useTranslations } from "next-intl";
++
++import { AuthGuard } from "@/components/auth/AuthGuard";
++import { HomeLogoLink } from "@/components/layout/HomeLogoLink";
++import { useAuth } from "@/contexts/AuthContext";
++import { intlLocaleMap, type AppLocale } from "@/i18n/config";
++import { Link, useRouter } from "@/i18n/navigation";
++import type { BillingInterval, PlanInfo, PlanPrice } from "@/types/billing";
++
++const POLL_INTERVAL_MS = 2000;
++const POLL_MAX_ATTEMPTS = 15;
++
++/** Valor em unidade menor (centavos) -> texto na moeda/idioma certos. */
++function formatPrice(price: PlanPrice, locale: string): string {
++    const currency = price.currency.toUpperCase();
++
++    // Moedas sem centavos (ex.: JPY) não dividem por 100.
++    const digits =
++        new Intl.NumberFormat("en", {
++            style: "currency",
++            currency,
++        }).resolvedOptions().maximumFractionDigits ?? 2;
++
++    return new Intl.NumberFormat(locale, {
++        style: "currency",
++        currency,
++    }).format(price.amount / 10 ** digits);
++}
++
++function formatDate(iso: string, locale: string): string {
++    return new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(
++        new Date(iso)
++    );
++}
++
++function BillingContent() {
++    const t = useTranslations("billing");
++    const appLocale = useLocale() as AppLocale;
++    const intlLocale = intlLocaleMap[appLocale] ?? "pt-BR";
++
++    const router = useRouter();
++    const searchParams = useSearchParams();
++    const checkoutParam = searchParams.get("checkout");
++
++    const {
++        billing,
++        isStreamer,
++        isStreamerMode,
++        refreshProfile,
++        setActiveMode,
++        enableStreamerMode,
++    } = useAuth();
++
++    const [plan, setPlan] = useState<PlanInfo | null>(null);
++    const [planFailed, setPlanFailed] = useState(false);
++    const [interval, setBillingInterval] =
++        useState<BillingInterval>("month");
++
++    const [busy, setBusy] = useState<
++        "checkout" | "portal" | "activate" | null
++    >(null);
++    const [errorCode, setErrorCode] = useState<string | null>(null);
++    const [waiting, setWaiting] = useState(checkoutParam === "success");
++
++    const subscribed = billing?.subscribed ?? false;
++    const subscription = billing?.subscription ?? null;
++
++    // Preços vêm do Stripe (via /api/billing/plan) — nada hardcoded aqui.
++    useEffect(() => {
++        let active = true;
++
++        fetch("/api/billing/plan")
++            .then((response) => {
++                if (!response.ok) {
++                    throw new Error("plan");
++                }
++
++                return response.json() as Promise<PlanInfo>;
++            })
++            .then((data) => {
++                if (!active) {
++                    return;
++                }
++
++                setPlan(data);
++
++                if (
++                    data.prices.length > 0 &&
++                    !data.prices.some((price) => price.interval === "month")
++                ) {
++                    setBillingInterval(data.prices[0].interval);
++                }
++            })
++            .catch(() => {
++                if (active) {
++                    setPlanFailed(true);
++                }
++            });
++
++        return () => {
++            active = false;
++        };
++    }, []);
++
++    // Voltou do Stripe: o webhook pode levar alguns segundos. Consultamos a
++    // sessão até a assinatura aparecer (ou desistimos e avisamos).
++    useEffect(() => {
++        if (checkoutParam !== "success") {
++            return;
++        }
++
++        if (subscribed) {
++            setWaiting(false);
++            return;
++        }
++
++        let attempts = 0;
++
++        const timer = setInterval(async () => {
++            attempts += 1;
++
++            await refreshProfile();
++
++            if (attempts >= POLL_MAX_ATTEMPTS) {
++                clearInterval(timer);
++                setWaiting(false);
++            }
++        }, POLL_INTERVAL_MS);
++
++        return () => clearInterval(timer);
++        // eslint-disable-next-line react-hooks/exhaustive-deps
++    }, [checkoutParam, subscribed]);
++
++    async function redirectTo(
++        endpoint: "/api/billing/checkout" | "/api/billing/portal",
++        kind: "checkout" | "portal",
++        body: Record<string, unknown>
++    ) {
++        setBusy(kind);
++        setErrorCode(null);
++
++        try {
++            const response = await fetch(endpoint, {
++                method: "POST",
++                credentials: "include",
++                headers: { "Content-Type": "application/json" },
++                body: JSON.stringify(body),
++            });
++
++            const data = (await response.json().catch(() => ({}))) as {
++                url?: string;
++                error?: string;
++            };
++
++            if (response.ok && data.url) {
++                // Sai do app (Stripe). Mantém "busy" até a navegação acontecer.
++                window.location.assign(data.url);
++                return;
++            }
++
++            setErrorCode(data.error ?? "GENERIC");
++        } catch {
++            setErrorCode("GENERIC");
++        }
++
++        setBusy(null);
++    }
++
++    function handleSubscribe() {
++        void redirectTo("/api/billing/checkout", "checkout", {
++            interval,
++            locale: appLocale,
++        });
++    }
++
++    function handleManage() {
++        void redirectTo("/api/billing/portal", "portal", {
++            locale: appLocale,
++        });
++    }
++
++    async function handleActivate() {
++        setBusy("activate");
++        setErrorCode(null);
++
++        const result = isStreamer
++            ? await setActiveMode("streamer")
++            : await enableStreamerMode();
++
++        if (result === "ok") {
++            router.push("/profile");
++            return;
++        }
++
++        setErrorCode("GENERIC");
++        setBusy(null);
++    }
++
++    function errorMessage(code: string): string {
++        switch (code) {
++            case "UNAUTHENTICATED":
++                return t("errorUnauthenticated");
++            case "BILLING_NOT_CONFIGURED":
++                return t("errorNotConfigured");
++            case "ALREADY_SUBSCRIBED":
++                return t("errorAlreadySubscribed");
++            case "NO_BILLING_ACCOUNT":
++                return t("errorNoBillingAccount");
++            default:
++                return t("errorGeneric");
++        }
++    }
++
++    function statusLabel(status: string): string {
++        const key = `status.${status}`;
++
++        return t.has(key) ? t(key) : status;
++    }
++
++    const selectedPrice =
++        plan?.prices.find((price) => price.interval === interval) ?? null;
++
++    const trialDays = plan?.trialDays ?? 0;
++
++    const features = [
++        t("feature1"),
++        t("feature2"),
++        t("feature3"),
++        t("feature4"),
++    ];
++
++    return (
++        <main className="flex min-h-screen flex-col items-center px-4 py-8">
++            <HomeLogoLink />
++
++            <div className="mb-5 w-full max-w-lg">
++                <Link
++                    href="/account"
++                    className="mb-5 inline-block text-xs text-zinc-500 transition-colors hover:text-zinc-300"
++                >
++                    {t("back")}
++                </Link>
++
++                <h1 className="text-xl font-bold text-zinc-100">
++                    {t("title")}
++                </h1>
++
++                <p className="mt-1 text-sm text-zinc-500">{t("subtitle")}</p>
++            </div>
++
++            <div className="w-full max-w-lg space-y-4">
++                {billing && !billing.enforced && (
++                    <p className="border border-twitch-border bg-twitch-panel px-4 py-3 text-xs text-zinc-400">
++                        {t("notEnforcedNotice")}
++                    </p>
++                )}
++
++                {checkoutParam === "canceled" && !subscribed && (
++                    <p className="border border-twitch-border bg-twitch-panel px-4 py-3 text-xs text-zinc-400">
++                        {t("checkoutCanceled")}
++                    </p>
++                )}
++
++                {checkoutParam === "success" && waiting && !subscribed && (
++                    <p
++                        role="status"
++                        className="border border-[#F55376]/30 bg-[#F55376]/10 px-4 py-3 text-xs text-zinc-200"
++                    >
++                        {t("checkoutProcessing")}
++                    </p>
++                )}
++
++                {checkoutParam === "success" && !waiting && !subscribed && (
++                    <p className="border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-xs text-yellow-200">
++                        {t("checkoutDelayed")}
++                    </p>
++                )}
++
++                {errorCode && (
++                    <p
++                        role="alert"
++                        className="border border-red-900/50 bg-red-950/30 px-4 py-3 text-xs text-red-400"
++                    >
++                        {errorMessage(errorCode)}
++                    </p>
++                )}
++
++                {subscribed && subscription ? (
++                    <section className="border border-twitch-border bg-twitch-panel p-6 shadow-2xl">
++                        <div className="flex items-center justify-between gap-3">
++                            <h2 className="text-lg font-bold text-zinc-100">
++                                {t("planName")}
++                            </h2>
++
++                            <span className="bg-[#F55376]/20 px-2 py-0.5 text-[11px] text-[#F55376]">
++                                {statusLabel(subscription.status)}
++                            </span>
++                        </div>
++
++                        {subscription.provider === "manual" && (
++                            <p className="mt-2 text-xs text-zinc-500">
++                                {t("providerManual")}
++                            </p>
++                        )}
++
++                        {subscription.status === "trialing" &&
++                            subscription.trialEnd && (
++                                <p className="mt-3 text-sm text-zinc-300">
++                                    {t("trialEndsOn", {
++                                        date: formatDate(
++                                            subscription.trialEnd,
++                                            intlLocale
++                                        ),
++                                    })}
++                                </p>
++                            )}
++
++                        {subscription.currentPeriodEnd &&
++                            subscription.status !== "trialing" && (
++                                <p className="mt-3 text-sm text-zinc-300">
++                                    {subscription.cancelAtPeriodEnd
++                                        ? t("endsOn", {
++                                              date: formatDate(
++                                                  subscription.currentPeriodEnd,
++                                                  intlLocale
++                                              ),
++                                          })
++                                        : t("renewsOn", {
++                                              date: formatDate(
++                                                  subscription.currentPeriodEnd,
++                                                  intlLocale
++                                              ),
++                                          })}
++                                </p>
++                            )}
++
++                        {subscription.status === "past_due" && (
++                            <p className="mt-3 border border-yellow-500/30 bg-yellow-500/10 px-3 py-2.5 text-xs text-yellow-200">
++                                {t("pastDueWarning")}
++                            </p>
++                        )}
++
++                        <div className="mt-6 flex flex-col gap-3">
++                            {!isStreamerMode && (
++                                <button
++                                    type="button"
++                                    onClick={handleActivate}
++                                    disabled={busy !== null}
++                                    className="w-full border border-[#F55376] bg-[#F55376] px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
++                                >
++                                    {busy === "activate"
++                                        ? t("activating")
++                                        : t("activateMode")}
++                                </button>
++                            )}
++
++                            {isStreamerMode && (
++                                <Link
++                                    href="/profile"
++                                    className="block w-full border border-[#F55376] bg-[#F55376] px-4 py-2.5 text-center text-sm font-semibold text-white transition-opacity hover:opacity-90"
++                                >
++                                    {t("goToHub")}
++                                </Link>
++                            )}
++
++                            {subscription.provider === "stripe" && (
++                                <button
++                                    type="button"
++                                    onClick={handleManage}
++                                    disabled={busy !== null}
++                                    className="w-full border border-twitch-border px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-500 hover:text-white disabled:cursor-wait disabled:opacity-60"
++                                >
++                                    {busy === "portal"
++                                        ? t("redirecting")
++                                        : t("manage")}
++                                </button>
++                            )}
++                        </div>
++                    </section>
++                ) : (
++                    <section className="border border-twitch-border bg-twitch-panel p-6 shadow-2xl">
++                        <div className="flex items-start justify-between gap-3">
++                            <div>
++                                <h2 className="text-lg font-bold text-zinc-100">
++                                    {t("planName")}
++                                </h2>
++
++                                <p className="mt-1 text-sm text-zinc-500">
++                                    {t("planTagline")}
++                                </p>
++                            </div>
++
++                            {trialDays > 0 && (
++                                <span className="shrink-0 bg-[#F55376]/20 px-2 py-0.5 text-[11px] text-[#F55376]">
++                                    {t("trialBadge", { days: trialDays })}
++                                </span>
++                            )}
++                        </div>
++
++                        {plan && plan.prices.length > 1 && (
++                            <div
++                                role="group"
++                                aria-label={t("intervalLabel")}
++                                className="mt-5 grid grid-cols-2 border border-zinc-700 bg-zinc-900 p-1"
++                            >
++                                {plan.prices.map((price) => (
++                                    <button
++                                        key={price.interval}
++                                        type="button"
++                                        aria-pressed={
++                                            interval === price.interval
++                                        }
++                                        onClick={() =>
++                                            setBillingInterval(price.interval)
++                                        }
++                                        className={`h-8 text-[11px] font-semibold uppercase tracking-wide transition-colors ${
++                                            interval === price.interval
++                                                ? "bg-[#F55376] text-white"
++                                                : "text-zinc-500 hover:text-zinc-300"
++                                        }`}
++                                    >
++                                        {price.interval === "year"
++                                            ? t("intervalYear")
++                                            : t("intervalMonth")}
++                                    </button>
++                                ))}
++                            </div>
++                        )}
++
++                        <div className="mt-5 min-h-[3rem]">
++                            {selectedPrice ? (
++                                <p className="text-3xl font-bold text-zinc-100">
++                                    {formatPrice(selectedPrice, intlLocale)}
++                                    <span className="ml-1 text-sm font-normal text-zinc-500">
++                                        {selectedPrice.interval === "year"
++                                            ? t("perYear")
++                                            : t("perMonth")}
++                                    </span>
++                                </p>
++                            ) : planFailed || (plan && !plan.enabled) ? (
++                                <p className="text-sm text-zinc-500">
++                                    {t("unavailable")}
++                                </p>
++                            ) : (
++                                <p className="text-sm text-zinc-500">
++                                    {t("loadingPlan")}
++                                </p>
++                            )}
++                        </div>
++
++                        <ul className="mt-5 space-y-2">
++                            {features.map((feature) => (
++                                <li
++                                    key={feature}
++                                    className="flex items-start gap-2 text-sm text-zinc-300"
++                                >
++                                    <span
++                                        aria-hidden="true"
++                                        className="mt-0.5 text-[#F55376]"
++                                    >
++                                        ✓
++                                    </span>
++
++                                    {feature}
++                                </li>
++                            ))}
++                        </ul>
++
++                        <button
++                            type="button"
++                            onClick={handleSubscribe}
++                            disabled={busy !== null || !selectedPrice}
++                            className="mt-6 w-full border border-[#F55376] bg-[#F55376] px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
++                        >
++                            {busy === "checkout"
++                                ? t("redirecting")
++                                : trialDays > 0
++                                  ? t("startTrial", { days: trialDays })
++                                  : t("subscribe")}
++                        </button>
++
++                        <p className="mt-3 text-center text-[11px] text-zinc-600">
++                            {t("securePayment")}
++                        </p>
++                    </section>
++                )}
++            </div>
++        </main>
++    );
++}
++
++export default function BillingPage() {
++    return (
++        <AuthGuard>
++            <Suspense fallback={null}>
++                <BillingContent />
++            </Suspense>
++        </AuthGuard>
++    );
++}
+diff --git a/app/[locale]/profile/page.tsx b/app/[locale]/profile/page.tsx
+index dcdeaac..96f4929 100644
+--- a/app/[locale]/profile/page.tsx
++++ b/app/[locale]/profile/page.tsx
+@@ -78,8 +78,12 @@ export default function ProfilePage() {
+         isStreamer,
+         isStreamerMode,
+         activeMode,
++        billing,
++        hasStreamerAccess,
+     } = useAuth();
+ 
++    const tBilling = useTranslations("billing");
++
+     const [connections, setConnections] =
+         useState<ConnectionsResponse | null>(null);
+ 
+@@ -186,6 +190,22 @@ export default function ProfilePage() {
+                             {tp("streamerModeHint")}
+                         </p>
+ 
++                        {billing?.enforced &&
++                            !hasStreamerAccess && (
++                                <>
++                                    <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-zinc-400">
++                                        {tBilling("gateHint")}
++                                    </p>
++
++                                    <Link
++                                        href="/billing"
++                                        className="mt-6 mr-3 inline-flex border border-[#F55376] bg-[#F55376] px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
++                                    >
++                                        {tBilling("gateCta")}
++                                    </Link>
++                                </>
++                            )}
++
+                         <Link
+                             href="/account"
+                             className="mt-6 inline-flex border border-twitch-border px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-[#F55376] hover:text-white"
+diff --git a/app/api/auth/profile/route.ts b/app/api/auth/profile/route.ts
+index bbb107b..30117ea 100644
+--- a/app/api/auth/profile/route.ts
++++ b/app/api/auth/profile/route.ts
+@@ -7,10 +7,14 @@ import {
+ 
+ import {
+     enableStreamerMode,
++    setAccountTypeStreamer,
+     setActiveMode,
+     updateProfile,
+ } from "@/lib/auth/users";
+ 
++import { hasStreamerAccess } from "@/lib/billing/entitlements";
++import { findSubscriptionByUserId } from "@/lib/billing/subscriptions";
++
+ import {
+     toProfile,
+     type ActiveMode,
+@@ -71,11 +75,26 @@ export async function PATCH(
+         }
+ 
+         if (body.enable_streamer_mode) {
+-            const updated =
+-                await enableStreamerMode(
+-                    user.id
++            // Declarar-se streamer é gratuito; USAR o modo streamer exige
++            // assinatura quando BILLING_ENFORCED=true. Sem direito, marcamos
++            // a conta como streamer (para a UI oferecer a assinatura) mas
++            // mantemos o modo ativo em "user".
++            const entitled =
++                hasStreamerAccess(
++                    await findSubscriptionByUserId(
++                        user.id
++                    )
+                 );
+ 
++            const updated =
++                entitled
++                    ? await enableStreamerMode(
++                        user.id
++                    )
++                    : await setAccountTypeStreamer(
++                        user.id
++                    );
++
+             if (!updated) {
+                 return NextResponse.json(
+                     {
+@@ -90,6 +109,8 @@ export async function PATCH(
+ 
+             return NextResponse.json({
+                 ok: true,
++                subscription_required:
++                    !entitled,
+                 profile: toProfile(updated),
+             });
+         }
+@@ -112,6 +133,26 @@ export async function PATCH(
+                 );
+             }
+ 
++            if (
++                body.active_mode ===
++                "streamer" &&
++                !hasStreamerAccess(
++                    await findSubscriptionByUserId(
++                        user.id
++                    )
++                )
++            ) {
++                return NextResponse.json(
++                    {
++                        error:
++                            "SUBSCRIPTION_REQUIRED",
++                    },
++                    {
++                        status: 402,
++                    }
++                );
++            }
++
+             const updated =
+                 await setActiveMode(
+                     user.id,
+diff --git a/app/api/auth/session/route.ts b/app/api/auth/session/route.ts
+index 2e5a32b..723536e 100644
+--- a/app/api/auth/session/route.ts
++++ b/app/api/auth/session/route.ts
+@@ -1,6 +1,14 @@
+ import { NextResponse } from "next/server";
+ 
+ import { readSessionCookie, validateSessionToken } from "@/lib/auth/session";
++import { setActiveMode } from "@/lib/auth/users";
++import { isBillingEnforced } from "@/lib/billing/config";
++import {
++    hasStreamerAccess,
++    isSubscriptionEntitled,
++} from "@/lib/billing/entitlements";
++import { findSubscriptionByUserId } from "@/lib/billing/subscriptions";
++import { toSubscriptionSummary, type BillingState } from "@/types/billing";
+ import { toProfile } from "@/types/user";
+ 
+ export const runtime = "nodejs";
+@@ -19,5 +27,28 @@ export async function GET() {
+         return NextResponse.json({ profile: null });
+     }
+ 
+-    return NextResponse.json({ profile: toProfile(user) });
++    const subscription = await findSubscriptionByUserId(user.id);
++    const entitled = hasStreamerAccess(subscription);
++
++    let current = user;
++
++    // Rede de segurança: o webhook já rebaixa quem perde a assinatura, mas o
++    // acesso também pode acabar só pelo relógio (período vencido, cortesia
++    // manual expirada) sem nenhum evento. Idempotente: só escreve na
++    // transição streamer -> user.
++    if (!entitled && user.active_mode === "streamer") {
++        current = (await setActiveMode(user.id, "user")) ?? user;
++    }
++
++    const billing: BillingState = {
++        enforced: isBillingEnforced(),
++        entitled,
++        subscribed: isSubscriptionEntitled(subscription),
++        subscription: toSubscriptionSummary(subscription),
++    };
++
++    return NextResponse.json({
++        profile: toProfile(current),
++        billing,
++    });
+ }
+diff --git a/app/api/billing/checkout/route.ts b/app/api/billing/checkout/route.ts
+new file mode 100644
+index 0000000..f54fce6
+--- /dev/null
++++ b/app/api/billing/checkout/route.ts
+@@ -0,0 +1,139 @@
++import { NextRequest, NextResponse } from "next/server";
++
++import { findUserById } from "@/lib/auth/users";
++import { getSessionUser } from "@/lib/auth/getSessionUser";
++import {
++    getAppUrl,
++    getPriceId,
++    getTrialDays,
++    isStripeConfigured,
++    safeLocale,
++    toStripeLocale,
++} from "@/lib/billing/config";
++import { isSubscriptionEntitled } from "@/lib/billing/entitlements";
++import { getStripe } from "@/lib/billing/stripe";
++import {
++    ensureStripeCustomer,
++    findSubscriptionByUserId,
++} from "@/lib/billing/subscriptions";
++import type { BillingInterval } from "@/types/billing";
++
++export const runtime = "nodejs";
++export const dynamic = "force-dynamic";
++
++function fail(error: string, status: number) {
++    return NextResponse.json({ error }, { status });
++}
++
++/**
++ * Cria uma Checkout Session do Stripe (modo assinatura) e devolve a URL para
++ * onde o navegador deve ir. O acesso NÃO é liberado aqui: quem libera é o
++ * webhook (lib/billing/webhook.ts) quando o Stripe confirma a assinatura.
++ */
++export async function POST(request: NextRequest) {
++    const sessionUser = await getSessionUser(request);
++
++    if (!sessionUser) {
++        return fail("UNAUTHENTICATED", 401);
++    }
++
++    if (!isStripeConfigured()) {
++        return fail("BILLING_NOT_CONFIGURED", 503);
++    }
++
++    let body: { interval?: unknown; locale?: unknown } = {};
++
++    try {
++        body = await request.json();
++    } catch {
++        // corpo opcional
++    }
++
++    if (
++        body.interval !== undefined &&
++        body.interval !== "month" &&
++        body.interval !== "year"
++    ) {
++        return fail("INVALID_INTERVAL", 400);
++    }
++
++    const interval: BillingInterval =
++        body.interval === "year" ? "year" : "month";
++
++    const priceId = getPriceId(interval);
++
++    if (!priceId) {
++        return fail("INVALID_INTERVAL", 400);
++    }
++
++    const locale = safeLocale(body.locale);
++
++    try {
++        const user = await findUserById(sessionUser.id);
++
++        if (!user) {
++            return fail("UNAUTHENTICATED", 401);
++        }
++
++        const existing = await findSubscriptionByUserId(user.id);
++
++        // Evita cobrança dupla: quem já tem assinatura viva gerencia no portal.
++        if (isSubscriptionEntitled(existing)) {
++            return fail("ALREADY_SUBSCRIBED", 409);
++        }
++
++        const stripe = getStripe();
++
++        let customerId = existing?.provider_customer_id ?? null;
++
++        if (!customerId) {
++            // Idempotency key: dois cliques seguidos não criam dois customers.
++            const customer = await stripe.customers.create(
++                {
++                    email: user.email,
++                    name: user.display_name ?? user.username,
++                    metadata: { user_id: user.id },
++                },
++                { idempotencyKey: `chatteia-customer-${user.id}` }
++            );
++
++            customerId = customer.id;
++        }
++
++        await ensureStripeCustomer(user.id, customerId);
++
++        const appUrl = getAppUrl(request);
++        const trialDays = getTrialDays();
++
++        // Sem `payment_method_types`: os meios de pagamento (cartão, Pix,
++        // boleto...) são controlados pelo painel do Stripe, sem novo deploy.
++        const session = await stripe.checkout.sessions.create({
++            mode: "subscription",
++            customer: customerId,
++            client_reference_id: user.id,
++            line_items: [{ price: priceId, quantity: 1 }],
++            allow_promotion_codes: true,
++            locale: toStripeLocale(locale),
++            success_url: `${appUrl}/${locale}/billing?checkout=success`,
++            cancel_url: `${appUrl}/${locale}/billing?checkout=canceled`,
++            metadata: { user_id: user.id },
++            subscription_data: {
++                metadata: { user_id: user.id },
++                ...(trialDays > 0 ? { trial_period_days: trialDays } : {}),
++            },
++        });
++
++        if (!session.url) {
++            return fail("CHECKOUT_FAILED", 502);
++        }
++
++        return NextResponse.json({ url: session.url });
++    } catch (error) {
++        console.error(
++            "[BILLING] Falha ao criar checkout:",
++            error instanceof Error ? error.message : error
++        );
++
++        return fail("CHECKOUT_FAILED", 502);
++    }
++}
+diff --git a/app/api/billing/plan/route.ts b/app/api/billing/plan/route.ts
+new file mode 100644
+index 0000000..b60115c
+--- /dev/null
++++ b/app/api/billing/plan/route.ts
+@@ -0,0 +1,95 @@
++import { NextResponse } from "next/server";
++
++import {
++    getConfiguredIntervals,
++    getPriceId,
++    getTrialDays,
++    isBillingEnforced,
++    isStripeConfigured,
++} from "@/lib/billing/config";
++import { getStripe } from "@/lib/billing/stripe";
++import type { PlanInfo, PlanPrice } from "@/types/billing";
++
++export const runtime = "nodejs";
++export const dynamic = "force-dynamic";
++
++/*
++ * O preço mora no Stripe (fonte da verdade) — a UI nunca hardcoda valores.
++ * Cache curto em memória para não bater na API do Stripe a cada visita.
++ */
++const CACHE_TTL_MS = 10 * 60 * 1000;
++
++let cache: { at: number; prices: PlanPrice[] } | null = null;
++
++async function loadPrices(): Promise<PlanPrice[]> {
++    if (cache && Date.now() - cache.at < CACHE_TTL_MS) {
++        return cache.prices;
++    }
++
++    const stripe = getStripe();
++
++    const results = await Promise.all(
++        getConfiguredIntervals().map(async (interval) => {
++            const price = await stripe.prices.retrieve(
++                getPriceId(interval) as string
++            );
++
++            if (
++                !price.active ||
++                price.unit_amount === null ||
++                price.recurring?.interval !== interval
++            ) {
++                console.warn(
++                    `[BILLING] Price ${price.id} ignorado: precisa estar ativo, ` +
++                        `ter valor fixo e recorrência "${interval}".`
++                );
++
++                return null;
++            }
++
++            return {
++                interval,
++                amount: price.unit_amount,
++                currency: price.currency,
++            } satisfies PlanPrice;
++        })
++    );
++
++    const prices = results.filter((item): item is PlanPrice => item !== null);
++
++    cache = { at: Date.now(), prices };
++
++    return prices;
++}
++
++export async function GET() {
++    const base = {
++        enforced: isBillingEnforced(),
++        trialDays: getTrialDays(),
++    };
++
++    if (!isStripeConfigured()) {
++        return NextResponse.json<PlanInfo>({
++            ...base,
++            enabled: false,
++            prices: [],
++        });
++    }
++
++    try {
++        const prices = await loadPrices();
++
++        return NextResponse.json<PlanInfo>({
++            ...base,
++            enabled: prices.length > 0,
++            prices,
++        });
++    } catch (error) {
++        console.error(
++            "[BILLING] Falha ao carregar preços:",
++            error instanceof Error ? error.message : error
++        );
++
++        return NextResponse.json({ error: "PLAN_UNAVAILABLE" }, { status: 502 });
++    }
++}
+diff --git a/app/api/billing/portal/route.ts b/app/api/billing/portal/route.ts
+new file mode 100644
+index 0000000..7376b01
+--- /dev/null
++++ b/app/api/billing/portal/route.ts
+@@ -0,0 +1,67 @@
++import { NextRequest, NextResponse } from "next/server";
++
++import { getSessionUser } from "@/lib/auth/getSessionUser";
++import {
++    getAppUrl,
++    isStripeConfigured,
++    safeLocale,
++} from "@/lib/billing/config";
++import { getStripe } from "@/lib/billing/stripe";
++import { findSubscriptionByUserId } from "@/lib/billing/subscriptions";
++
++export const runtime = "nodejs";
++export const dynamic = "force-dynamic";
++
++function fail(error: string, status: number) {
++    return NextResponse.json({ error }, { status });
++}
++
++/**
++ * Abre o Portal do Cliente do Stripe (trocar cartão, ver faturas, cancelar).
++ * Requer configurar o portal uma vez no painel do Stripe.
++ */
++export async function POST(request: NextRequest) {
++    const sessionUser = await getSessionUser(request);
++
++    if (!sessionUser) {
++        return fail("UNAUTHENTICATED", 401);
++    }
++
++    if (!isStripeConfigured()) {
++        return fail("BILLING_NOT_CONFIGURED", 503);
++    }
++
++    let body: { locale?: unknown } = {};
++
++    try {
++        body = await request.json();
++    } catch {
++        // corpo opcional
++    }
++
++    try {
++        const subscription = await findSubscriptionByUserId(sessionUser.id);
++
++        if (
++            !subscription ||
++            subscription.provider !== "stripe" ||
++            !subscription.provider_customer_id
++        ) {
++            return fail("NO_BILLING_ACCOUNT", 404);
++        }
++
++        const session = await getStripe().billingPortal.sessions.create({
++            customer: subscription.provider_customer_id,
++            return_url: `${getAppUrl(request)}/${safeLocale(body.locale)}/billing`,
++        });
++
++        return NextResponse.json({ url: session.url });
++    } catch (error) {
++        console.error(
++            "[BILLING] Falha ao abrir portal:",
++            error instanceof Error ? error.message : error
++        );
++
++        return fail("PORTAL_FAILED", 502);
++    }
++}
+diff --git a/app/api/billing/webhook/route.ts b/app/api/billing/webhook/route.ts
+new file mode 100644
+index 0000000..3b03704
+--- /dev/null
++++ b/app/api/billing/webhook/route.ts
+@@ -0,0 +1,59 @@
++import { getStripe } from "@/lib/billing/stripe";
++import { handleStripeEvent } from "@/lib/billing/webhook";
++
++export const runtime = "nodejs";
++export const dynamic = "force-dynamic";
++
++/**
++ * Endpoint do webhook do Stripe. É AQUI que o acesso é concedido/removido.
++ *
++ * - Sem sessão/cookie de propósito: quem autentica é a ASSINATURA do
++ *   payload (header `stripe-signature` + STRIPE_WEBHOOK_SECRET).
++ * - Precisa do corpo CRU (`request.text()`); qualquer parse antes quebra a
++ *   verificação da assinatura.
++ * - Só devolvemos 2xx quando o evento foi tratado. Erro interno => 500 e o
++ *   Stripe reenvia (a idempotência está em billing_events).
++ */
++export async function POST(request: Request) {
++    const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
++
++    if (!secret || !process.env.STRIPE_SECRET_KEY?.trim()) {
++        return Response.json(
++            { error: "BILLING_NOT_CONFIGURED" },
++            { status: 503 }
++        );
++    }
++
++    const signature = request.headers.get("stripe-signature");
++
++    if (!signature) {
++        return Response.json({ error: "MISSING_SIGNATURE" }, { status: 400 });
++    }
++
++    const body = await request.text();
++
++    let event;
++
++    try {
++        event = await getStripe().webhooks.constructEventAsync(
++            body,
++            signature,
++            secret
++        );
++    } catch {
++        return Response.json({ error: "INVALID_SIGNATURE" }, { status: 400 });
++    }
++
++    try {
++        const result = await handleStripeEvent(event);
++
++        return Response.json({ received: true, result });
++    } catch (error) {
++        console.error(
++            `[BILLING] Falha ao processar ${event.type} (${event.id}):`,
++            error instanceof Error ? error.message : error
++        );
++
++        return Response.json({ error: "PROCESSING_FAILED" }, { status: 500 });
++    }
++}
+diff --git a/components/layout/ProfileMenu.tsx b/components/layout/ProfileMenu.tsx
+index 7a45e24..76aab56 100644
+--- a/components/layout/ProfileMenu.tsx
++++ b/components/layout/ProfileMenu.tsx
+@@ -36,6 +36,7 @@ export function ProfileMenu() {
+     const t = useTranslations("auth");
+     const tLang = useTranslations("languageSwitcher");
+     const tSettings = useTranslations("settings");
++    const tBilling = useTranslations("billing");
+ 
+     const currentLocale =
+         useLocale() as AppLocale;
+@@ -57,6 +58,7 @@ export function ProfileMenu() {
+         activeMode,
+         setActiveMode,
+         enableStreamerMode,
++        billing,
+     } = useAuth();
+ 
+     const [open, setOpen] =
+@@ -162,12 +164,18 @@ export function ProfileMenu() {
+         });
+ 
+         if (!isStreamer) {
+-            const success =
++            const result =
+                 await enableStreamerMode();
+ 
+             setChangingMode(false);
+ 
+-            if (success) {
++            if (result === "subscription_required") {
++                setOpen(false);
++                router.push("/billing");
++                return;
++            }
++
++            if (result === "ok") {
+                 setOpen(false);
+             }
+ 
+@@ -179,14 +187,20 @@ export function ProfileMenu() {
+                 ? "user"
+                 : "streamer";
+ 
+-        const success =
++        const result =
+             await setActiveMode(
+                 nextMode
+             );
+ 
+         setChangingMode(false);
+ 
+-        if (success) {
++        if (result === "subscription_required") {
++            setOpen(false);
++            router.push("/billing");
++            return;
++        }
++
++        if (result === "ok") {
+             setOpen(false);
+         }
+     }
+@@ -320,6 +334,21 @@ export function ProfileMenu() {
+                                             {t("navStreamerHub")}
+                                         </Link>
+                                     )}
++
++                                    {isStreamer &&
++                                        billing?.enforced && (
++                                            <Link
++                                                href="/billing"
++                                                onClick={() =>
++                                                    setOpen(
++                                                        false
++                                                    )
++                                                }
++                                                className="block px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white"
++                                            >
++                                                {tBilling("navLabel")}
++                                            </Link>
++                                        )}
+                                 </div>
+ 
+                                 <div className="border-b border-twitch-border px-4 py-3">
+diff --git a/contexts/AuthContext.tsx b/contexts/AuthContext.tsx
+index 51eb990..5b3431b 100644
+--- a/contexts/AuthContext.tsx
++++ b/contexts/AuthContext.tsx
+@@ -7,51 +7,79 @@ import {
+     useState,
+ } from "react";
+ 
++import type { BillingState } from "@/types/billing";
+ import type { ActiveMode, Profile } from "@/types/user";
+ 
++/**
++ * Resultado de tentar entrar no modo streamer:
++ * - "ok": deu certo;
++ * - "subscription_required": falta assinatura (a UI deve levar a /billing);
++ * - "error": falha genérica (rede, sem permissão...).
++ */
++export type ModeChangeResult =
++    | "ok"
++    | "subscription_required"
++    | "error";
++
+ type AuthContextValue = {
+     user: { id: string; email: string } | null;
+     profile: Profile | null;
++    billing: BillingState | null;
+     loading: boolean;
+     isStreamer: boolean;
+     isStreamerMode: boolean;
++    /** Pode usar o modo streamer agora (assinatura em dia ou cobrança desligada). */
++    hasStreamerAccess: boolean;
+     activeMode: ActiveMode;
+     refreshProfile: () => Promise<void>;
+-    setActiveMode: (mode: ActiveMode) => Promise<boolean>;
+-    enableStreamerMode: () => Promise<boolean>;
++    setActiveMode: (mode: ActiveMode) => Promise<ModeChangeResult>;
++    enableStreamerMode: () => Promise<ModeChangeResult>;
+     signOut: () => Promise<void>;
+ };
+ 
+ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+ 
+-async function fetchSessionProfile(): Promise<Profile | null> {
++type SessionSnapshot = {
++    profile: Profile | null;
++    billing: BillingState | null;
++};
++
++async function fetchSession(): Promise<SessionSnapshot> {
+     try {
+         const response = await fetch("/api/auth/session", {
+             credentials: "include",
+         });
+ 
+         if (!response.ok) {
+-            return null;
++            return { profile: null, billing: null };
+         }
+ 
+-        const data = (await response.json()) as { profile: Profile | null };
++        const data = (await response.json()) as {
++            profile: Profile | null;
++            billing?: BillingState;
++        };
+ 
+-        return data.profile;
++        return {
++            profile: data.profile,
++            billing: data.billing ?? null,
++        };
+     } catch {
+-        return null;
++        return { profile: null, billing: null };
+     }
+ }
+ 
+ export function AuthProvider({ children }: { children: React.ReactNode }) {
+     const [profile, setProfile] = useState<Profile | null>(null);
++    const [billing, setBilling] = useState<BillingState | null>(null);
+     const [loading, setLoading] = useState(true);
+ 
+     useEffect(() => {
+         let active = true;
+ 
+-        fetchSessionProfile().then((nextProfile) => {
++        fetchSession().then((snapshot) => {
+             if (active) {
+-                setProfile(nextProfile);
++                setProfile(snapshot.profile);
++                setBilling(snapshot.billing);
+                 setLoading(false);
+             }
+         });
+@@ -62,24 +90,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
+     }, []);
+ 
+     async function refreshProfile() {
+-        const nextProfile =
+-            await fetchSessionProfile();
++        const snapshot = await fetchSession();
+ 
+-        console.log(
+-            "[AUTH] Perfil após refresh:",
+-            nextProfile
+-        );
+-
+-        setProfile(nextProfile);
++        setProfile(snapshot.profile);
++        setBilling(snapshot.billing);
+     }
+ 
+-    async function setActiveModeInternal(mode: ActiveMode): Promise<boolean> {
++    async function setActiveModeInternal(
++        mode: ActiveMode
++    ): Promise<ModeChangeResult> {
+         if (!profile) {
+-            return false;
++            return "error";
+         }
+ 
+         if (mode === "streamer" && profile.account_type !== "streamer") {
+-            return false;
++            return "error";
+         }
+ 
+         const response = await fetch("/api/auth/profile", {
+@@ -89,20 +114,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
+             body: JSON.stringify({ active_mode: mode }),
+         });
+ 
++        if (response.status === 402) {
++            return "subscription_required";
++        }
++
+         if (!response.ok) {
+-            return false;
++            return "error";
+         }
+ 
+         const data = (await response.json()) as { profile: Profile };
+ 
+         setProfile(data.profile);
+ 
+-        return true;
++        return "ok";
+     }
+ 
+-    async function enableStreamerModeInternal(): Promise<boolean> {
++    async function enableStreamerModeInternal(): Promise<ModeChangeResult> {
+         if (!profile) {
+-            return false;
++            return "error";
+         }
+ 
+         const response = await fetch("/api/auth/profile", {
+@@ -113,14 +142,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
+         });
+ 
+         if (!response.ok) {
+-            return false;
++            return "error";
+         }
+ 
+-        const data = (await response.json()) as { profile: Profile };
++        const data = (await response.json()) as {
++            profile: Profile;
++            subscription_required?: boolean;
++        };
+ 
++        // A conta já foi marcada como streamer; o modo só ativa com assinatura.
+         setProfile(data.profile);
+ 
+-        return true;
++        return data.subscription_required ? "subscription_required" : "ok";
+     }
+ 
+     async function signOut() {
+@@ -130,10 +163,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
+         });
+ 
+         setProfile(null);
++        setBilling(null);
+     }
+ 
++    // Sem dados de billing (ex.: resposta antiga em cache) não bloqueamos.
++    const hasStreamerAccess = billing ? billing.entitled : true;
++
+     const isStreamer = profile?.account_type === "streamer";
+-    const isStreamerMode = isStreamer && profile?.active_mode === "streamer";
++    const isStreamerMode =
++        isStreamer &&
++        hasStreamerAccess &&
++        profile?.active_mode === "streamer";
+     const activeMode = profile?.active_mode ?? "user";
+ 
+     const user = profile ? { id: profile.id, email: profile.email } : null;
+@@ -143,9 +183,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
+             value={{
+                 user,
+                 profile,
++                billing,
+                 loading,
+                 isStreamer,
+                 isStreamerMode,
++                hasStreamerAccess,
+                 activeMode,
+                 refreshProfile,
+                 setActiveMode: setActiveModeInternal,
+diff --git a/docker-entrypoint.sh b/docker-entrypoint.sh
+index 568e684..1fa6ed8 100755
+--- a/docker-entrypoint.sh
++++ b/docker-entrypoint.sh
+@@ -3,10 +3,8 @@ set -eu
+ 
+ if [ -n "${DATABASE_URL:-}" ]; then
+   DB_CONNECTION_STRING="$DATABASE_URL"
+-  DB_CHECK_URL="$DATABASE_URL"
+ elif [ -n "${DB_HOST:-}" ] && [ -n "${DB_NAME:-}" ] && [ -n "${DB_USER:-}" ] && [ -n "${DB_PASSWORD:-}" ]; then
+   DB_CONNECTION_STRING="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}?sslmode=${DB_SSLMODE:-disable}"
+-  DB_CHECK_URL="$DB_CONNECTION_STRING"
+ else
+   echo "DATABASE_URL or DB_HOST/DB_NAME/DB_USER/DB_PASSWORD must be set."
+   exit 1
+@@ -14,11 +12,9 @@ fi
+ 
+ export DATABASE_URL="$DB_CONNECTION_STRING"
+ 
+-if ! psql "$DB_CHECK_URL" -tc "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('users', 'sessions', 'oauth_accounts');" | grep -q 1; then
+-  echo "Database schema not found. Applying migration..."
+-  psql "$DB_CHECK_URL" -f /app/postgres/migrations/0001_init.sql
+-else
+-  echo "Database schema already exists. Skipping migration."
+-fi
++# Aplica migrations pendentes (0001, 0002, ...). Antes só a 0001 rodava, e só
++# se o banco estivesse vazio — migrations novas nunca chegariam a bancos
++# existentes.
++sh /app/postgres/migrate.sh
+ 
+ exec "$@"
+diff --git a/lib/auth/users.ts b/lib/auth/users.ts
+index 930bf08..ed5a6e0 100644
+--- a/lib/auth/users.ts
++++ b/lib/auth/users.ts
+@@ -192,6 +192,29 @@ export async function enableStreamerMode(
+     return rows[0] ?? null;
+ }
+ 
++/**
++ * Marca a conta como "streamer" SEM ativar o modo streamer. Usado quando o
++ * usuário se declara streamer mas ainda não tem assinatura (ver
++ * app/api/auth/profile/route.ts).
++ */
++export async function setAccountTypeStreamer(
++    userId: string
++): Promise<UserRow | null> {
++    const { rows } = await pool.query<UserRow>(
++        `
++        UPDATE users
++        SET
++            account_type = 'streamer',
++            updated_at = now()
++        WHERE id = $1
++        RETURNING *
++        `,
++        [userId]
++    );
++
++    return rows[0] ?? null;
++}
++
+ function normalizeOAuthUsername(
+     value: string
+ ): string {
+diff --git a/lib/billing/config.ts b/lib/billing/config.ts
+new file mode 100644
+index 0000000..7c50646
+--- /dev/null
++++ b/lib/billing/config.ts
+@@ -0,0 +1,93 @@
++import { isAppLocale } from "@/i18n/config";
++import type { BillingInterval } from "@/types/billing";
++
++/*
++ * Toda a configuração de cobrança vem de variáveis de ambiente lidas em
++ * RUNTIME (nunca como build-arg do Docker — são segredos).
++ */
++
++export const PLAN_KEY = "streamer";
++
++/**
++ * Enquanto for false (padrão), NADA muda para os usuários: o modo streamer
++ * continua liberado como antes. Ligue (BILLING_ENFORCED=true) só depois de
++ * testar o fluxo completo com as chaves de teste do Stripe.
++ */
++export function isBillingEnforced(): boolean {
++    return process.env.BILLING_ENFORCED === "true";
++}
++
++export function getPriceId(interval: BillingInterval): string | null {
++    const value =
++        interval === "year"
++            ? process.env.STRIPE_PRICE_STREAMER_YEARLY
++            : process.env.STRIPE_PRICE_STREAMER_MONTHLY;
++
++    return value?.trim() || null;
++}
++
++export function getConfiguredIntervals(): BillingInterval[] {
++    return (["month", "year"] as const).filter((interval) =>
++        Boolean(getPriceId(interval))
++    );
++}
++
++export function isStripeConfigured(): boolean {
++    return (
++        Boolean(process.env.STRIPE_SECRET_KEY?.trim()) &&
++        getConfiguredIntervals().length > 0
++    );
++}
++
++export function getTrialDays(): number {
++    const parsed = Number.parseInt(process.env.STRIPE_TRIAL_DAYS ?? "0", 10);
++
++    if (!Number.isFinite(parsed) || parsed < 0) {
++        return 0;
++    }
++
++    return Math.min(parsed, 90);
++}
++
++/**
++ * URL pública do app (usada nas URLs de retorno do Stripe).
++ *
++ * Em produção exigimos APP_URL: atrás de proxy/Docker o `request.url` pode
++ * refletir o host interno (0.0.0.0:3000) e mandaria o cliente para lugar
++ * nenhum depois de pagar.
++ */
++export function getAppUrl(request: Request): string {
++    const configured = process.env.APP_URL?.trim().replace(/\/+$/, "");
++
++    if (configured) {
++        return configured;
++    }
++
++    if (process.env.NODE_ENV === "production") {
++        throw new Error("APP_URL não configurado.");
++    }
++
++    return new URL(request.url).origin;
++}
++
++/** Idiomas do app -> locales aceitos pelo Stripe Checkout. */
++export function toStripeLocale(locale: string): "pt-BR" | "en" | "es" | "ru" {
++    if (!isAppLocale(locale)) {
++        return "pt-BR";
++    }
++
++    switch (locale) {
++        case "en":
++            return "en";
++        case "es":
++            return "es";
++        case "ru":
++            return "ru";
++        default:
++            return "pt-BR";
++    }
++}
++
++export function safeLocale(value: unknown): string {
++    return typeof value === "string" && isAppLocale(value) ? value : "pt-br";
++}
+diff --git a/lib/billing/entitlements.ts b/lib/billing/entitlements.ts
+new file mode 100644
+index 0000000..ec11237
+--- /dev/null
++++ b/lib/billing/entitlements.ts
+@@ -0,0 +1,58 @@
++import { isBillingEnforced } from "@/lib/billing/config";
++import type { SubscriptionRow } from "@/types/billing";
++
++/*
++ * ============================================================================
++ * REGRA ÚNICA de "quem pode usar o modo streamer".
++ * Tudo (rotas de API, sessão, UI) decide por aqui — não replique esta lógica.
++ * ============================================================================
++ */
++
++/**
++ * `past_due` = a última cobrança falhou e o Stripe ainda está tentando de
++ * novo. Mantemos o acesso (o cliente não perde o overlay no meio da live por
++ * um cartão recusado), limitado pela tolerância abaixo.
++ */
++const ENTITLED_STATUSES = new Set(["active", "trialing", "past_due"]);
++
++/**
++ * Folga após o fim do período: a renovação paga chega por webhook alguns
++ * segundos depois de `current_period_end`; sem folga haveria uma janela em
++ * que quem acabou de renovar perde o acesso. Também limita o `past_due`.
++ */
++export const PERIOD_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
++
++export function isSubscriptionEntitled(
++    subscription: Pick<SubscriptionRow, "status" | "current_period_end"> | null,
++    now: number = Date.now()
++): boolean {
++    if (!subscription) {
++        return false;
++    }
++
++    if (!ENTITLED_STATUSES.has(subscription.status)) {
++        return false;
++    }
++
++    // Sem data de fim (ex.: cortesia manual sem validade): não expira.
++    if (!subscription.current_period_end) {
++        return true;
++    }
++
++    return subscription.current_period_end.getTime() + PERIOD_GRACE_MS > now;
++}
++
++/**
++ * O usuário pode usar o modo streamer? Com BILLING_ENFORCED desligado,
++ * sempre sim (comportamento anterior à cobrança).
++ */
++export function hasStreamerAccess(
++    subscription: Pick<SubscriptionRow, "status" | "current_period_end"> | null,
++    now: number = Date.now()
++): boolean {
++    if (!isBillingEnforced()) {
++        return true;
++    }
++
++    return isSubscriptionEntitled(subscription, now);
++}
+diff --git a/lib/billing/stripe.ts b/lib/billing/stripe.ts
+new file mode 100644
+index 0000000..1ca82b3
+--- /dev/null
++++ b/lib/billing/stripe.ts
+@@ -0,0 +1,41 @@
++import Stripe from "stripe";
++
++export class BillingNotConfiguredError extends Error {
++    constructor() {
++        super("STRIPE_SECRET_KEY não configurado.");
++        this.name = "BillingNotConfiguredError";
++    }
++}
++
++const globalForStripe = globalThis as unknown as {
++    __chatteiaStripe?: Stripe;
++};
++
++/**
++ * Cliente Stripe criado sob demanda (lazy): o build do Next e ambientes sem
++ * Stripe configurado não quebram por falta da chave.
++ *
++ * Não fixamos `apiVersion`: o SDK usa a versão da API contra a qual foi
++ * tipado, então tipos e respostas andam juntos ao atualizar o pacote.
++ */
++export function getStripe(): Stripe {
++    if (globalForStripe.__chatteiaStripe) {
++        return globalForStripe.__chatteiaStripe;
++    }
++
++    const key = process.env.STRIPE_SECRET_KEY?.trim();
++
++    if (!key) {
++        throw new BillingNotConfiguredError();
++    }
++
++    const client = new Stripe(key, {
++        maxNetworkRetries: 2,
++        timeout: 15_000,
++        appInfo: { name: "Chatteia" },
++    });
++
++    globalForStripe.__chatteiaStripe = client;
++
++    return client;
++}
+diff --git a/lib/billing/subscriptions.ts b/lib/billing/subscriptions.ts
+new file mode 100644
+index 0000000..dde1c10
+--- /dev/null
++++ b/lib/billing/subscriptions.ts
+@@ -0,0 +1,177 @@
++import type { Pool, PoolClient } from "pg";
++
++import { pool } from "@/lib/db/pool";
++
++import type { SubscriptionRow } from "@/types/billing";
++
++/*
++ * Única camada que fala SQL com `subscriptions` / `billing_events`.
++ * Todas as funções aceitam um `db` opcional para rodar dentro de uma
++ * transação (ver lib/billing/webhook.ts).
++ */
++
++type Queryable = Pick<Pool | PoolClient, "query">;
++
++export async function findSubscriptionByUserId(
++    userId: string,
++    db: Queryable = pool
++): Promise<SubscriptionRow | null> {
++    const { rows } = await db.query<SubscriptionRow>(
++        "select * from subscriptions where user_id = $1 limit 1",
++        [userId]
++    );
++
++    return rows[0] ?? null;
++}
++
++export async function findUserIdByCustomerId(
++    customerId: string,
++    db: Queryable = pool
++): Promise<string | null> {
++    const { rows } = await db.query<{ user_id: string }>(
++        `select user_id from subscriptions
++         where provider = 'stripe' and provider_customer_id = $1
++         limit 1`,
++        [customerId]
++    );
++
++    return rows[0]?.user_id ?? null;
++}
++
++export async function userExists(
++    userId: string,
++    db: Queryable = pool
++): Promise<boolean> {
++    const { rows } = await db.query(
++        "select 1 from users where id = $1 limit 1",
++        [userId]
++    );
++
++    return rows.length > 0;
++}
++
++/**
++ * Garante que o usuário tenha um customer do Stripe registrado.
++ *
++ * - Sem linha: cria (status "incomplete").
++ * - Linha com customer: mantém (reaproveita o customer de assinaturas antigas).
++ * - Linha sem customer (cortesia manual vencida): vira uma linha Stripe limpa.
++ *
++ * Devolve sempre a linha final.
++ */
++export async function ensureStripeCustomer(
++    userId: string,
++    customerId: string,
++    db: Queryable = pool
++): Promise<SubscriptionRow> {
++    await db.query(
++        `insert into subscriptions
++             (user_id, provider, provider_customer_id, status)
++         values ($1, 'stripe', $2, 'incomplete')
++         on conflict (user_id) do update set
++             provider = 'stripe',
++             provider_customer_id = excluded.provider_customer_id,
++             provider_subscription_id = null,
++             status = 'incomplete',
++             current_period_end = null,
++             trial_end = null,
++             cancel_at_period_end = false,
++             updated_at = now()
++         where subscriptions.provider_customer_id is null`,
++        [userId, customerId]
++    );
++
++    const row = await findSubscriptionByUserId(userId, db);
++
++    if (!row) {
++        throw new Error("Linha de assinatura não encontrada após upsert.");
++    }
++
++    return row;
++}
++
++export type StripeSubscriptionSnapshot = {
++    userId: string;
++    customerId: string;
++    subscriptionId: string;
++    plan: string;
++    priceId: string | null;
++    status: string;
++    currentPeriodEnd: Date | null;
++    trialEnd: Date | null;
++    cancelAtPeriodEnd: boolean;
++    /** `created` do evento do Stripe que trouxe este estado. */
++    eventAt: Date;
++};
++
++/**
++ * Aplica o estado de uma assinatura do Stripe. Devolve a linha resultante,
++ * ou `null` se o evento foi descartado por ser:
++ *   - mais antigo que o último já aplicado (Stripe não garante ordem); ou
++ *   - de OUTRA assinatura enquanto a atual ainda está viva (ex.: o
++ *     "deleted" atrasado de uma assinatura antiga não pode derrubar a nova).
++ */
++export async function applyStripeSubscription(
++    snapshot: StripeSubscriptionSnapshot,
++    db: Queryable = pool
++): Promise<SubscriptionRow | null> {
++    const { rows } = await db.query<SubscriptionRow>(
++        `insert into subscriptions (
++             user_id, provider, provider_customer_id, provider_subscription_id,
++             plan, price_id, status, current_period_end, trial_end,
++             cancel_at_period_end, provider_event_at
++         )
++         values ($1, 'stripe', $2, $3, $4, $5, $6, $7, $8, $9, $10)
++         on conflict (user_id) do update set
++             provider = 'stripe',
++             provider_customer_id = excluded.provider_customer_id,
++             provider_subscription_id = excluded.provider_subscription_id,
++             plan = excluded.plan,
++             price_id = excluded.price_id,
++             status = excluded.status,
++             current_period_end = excluded.current_period_end,
++             trial_end = excluded.trial_end,
++             cancel_at_period_end = excluded.cancel_at_period_end,
++             provider_event_at = excluded.provider_event_at,
++             updated_at = now()
++         where
++             (subscriptions.provider_event_at is null
++              or subscriptions.provider_event_at <= excluded.provider_event_at)
++             and
++             (subscriptions.provider_subscription_id is null
++              or subscriptions.provider_subscription_id = excluded.provider_subscription_id
++              or subscriptions.status in ('canceled', 'incomplete_expired'))
++         returning *`,
++        [
++            snapshot.userId,
++            snapshot.customerId,
++            snapshot.subscriptionId,
++            snapshot.plan,
++            snapshot.priceId,
++            snapshot.status,
++            snapshot.currentPeriodEnd,
++            snapshot.trialEnd,
++            snapshot.cancelAtPeriodEnd,
++            snapshot.eventAt,
++        ]
++    );
++
++    return rows[0] ?? null;
++}
++
++/** true = evento novo; false = já processado antes (duplicado). */
++export async function recordBillingEvent(
++    provider: string,
++    eventId: string,
++    eventType: string,
++    db: Queryable = pool
++): Promise<boolean> {
++    const { rowCount } = await db.query(
++        `insert into billing_events (provider, event_id, event_type)
++         values ($1, $2, $3)
++         on conflict do nothing`,
++        [provider, eventId, eventType]
++    );
++
++    return (rowCount ?? 0) > 0;
++}
+diff --git a/lib/billing/webhook.ts b/lib/billing/webhook.ts
+new file mode 100644
+index 0000000..7f683cf
+--- /dev/null
++++ b/lib/billing/webhook.ts
+@@ -0,0 +1,162 @@
++import type Stripe from "stripe";
++
++import { PLAN_KEY } from "@/lib/billing/config";
++import { hasStreamerAccess } from "@/lib/billing/entitlements";
++import {
++    applyStripeSubscription,
++    findUserIdByCustomerId,
++    recordBillingEvent,
++    userExists,
++} from "@/lib/billing/subscriptions";
++import { pool } from "@/lib/db/pool";
++
++/**
++ * Eventos que carregam um objeto Subscription completo. O estado vem do
++ * PRÓPRIO evento (sem chamadas extras à API do Stripe); a ordem é garantida
++ * por `provider_event_at`. `checkout.session.completed` não é necessário: o
++ * vínculo usuário<->customer é gravado ao criar o checkout, e o status chega
++ * em `customer.subscription.created`.
++ */
++const SUBSCRIPTION_EVENTS = new Set<string>([
++    "customer.subscription.created",
++    "customer.subscription.updated",
++    "customer.subscription.deleted",
++    "customer.subscription.paused",
++    "customer.subscription.resumed",
++]);
++
++const UUID_REGEX =
++    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
++
++export type StripeEventResult = "applied" | "duplicate" | "ignored";
++
++function toDate(seconds: number | null | undefined): Date | null {
++    return typeof seconds === "number" ? new Date(seconds * 1000) : null;
++}
++
++/** Desde a API "basil" o fim do período fica nos ITENS, não na assinatura. */
++function getPeriodEnd(subscription: Stripe.Subscription): Date | null {
++    let latest: number | null = null;
++
++    for (const item of subscription.items.data) {
++        if (latest === null || item.current_period_end > latest) {
++            latest = item.current_period_end;
++        }
++    }
++
++    return toDate(latest);
++}
++
++export async function handleStripeEvent(
++    event: Stripe.Event
++): Promise<StripeEventResult> {
++    if (!SUBSCRIPTION_EVENTS.has(event.type)) {
++        return "ignored";
++    }
++
++    const subscription = event.data.object as Stripe.Subscription;
++
++    const customerId =
++        typeof subscription.customer === "string"
++            ? subscription.customer
++            : subscription.customer.id;
++
++    const client = await pool.connect();
++
++    try {
++        await client.query("BEGIN");
++
++        // Idempotência: gravado na mesma transação que aplica a mudança.
++        // Se algo falhar abaixo, o ROLLBACK desfaz este registro também e o
++        // reenvio do Stripe é processado normalmente.
++        const isNew = await recordBillingEvent(
++            "stripe",
++            event.id,
++            event.type,
++            client
++        );
++
++        if (!isNew) {
++            await client.query("COMMIT");
++            return "duplicate";
++        }
++
++        let userId = await findUserIdByCustomerId(customerId, client);
++
++        if (!userId) {
++            const fromMetadata = subscription.metadata?.user_id;
++
++            if (
++                fromMetadata &&
++                UUID_REGEX.test(fromMetadata) &&
++                (await userExists(fromMetadata, client))
++            ) {
++                userId = fromMetadata;
++            }
++        }
++
++        if (!userId) {
++            // Assinatura criada fora do nosso fluxo (ex.: direto no painel do
++            // Stripe, sem metadata). Não há a quem atribuir: registramos e
++            // seguimos com 200 para o Stripe não ficar reenviando.
++            console.warn(
++                `[BILLING] Evento ${event.id} (${event.type}) sem usuário associado ` +
++                    `(customer ${customerId}). Ignorado.`
++            );
++
++            await client.query("COMMIT");
++            return "ignored";
++        }
++
++        const row = await applyStripeSubscription(
++            {
++                userId,
++                customerId,
++                subscriptionId: subscription.id,
++                plan: PLAN_KEY,
++                priceId: subscription.items.data[0]?.price?.id ?? null,
++                status: subscription.status,
++                currentPeriodEnd: getPeriodEnd(subscription),
++                trialEnd: toDate(subscription.trial_end),
++                cancelAtPeriodEnd: subscription.cancel_at_period_end,
++                eventAt: new Date(event.created * 1000),
++            },
++            client
++        );
++
++        if (!row) {
++            console.warn(
++                `[BILLING] Evento ${event.id} (${event.type}) descartado ` +
++                    "(fora de ordem ou de outra assinatura)."
++            );
++
++            await client.query("COMMIT");
++            return "ignored";
++        }
++
++        // Perdeu o direito? Tira do modo streamer agora, em vez de esperar o
++        // próximo carregamento de sessão. (Com BILLING_ENFORCED desligado
++        // hasStreamerAccess é sempre true, então nada é rebaixado.)
++        if (!hasStreamerAccess(row)) {
++            await client.query(
++                `update users
++                 set active_mode = 'user', updated_at = now()
++                 where id = $1 and active_mode = 'streamer'`,
++                [userId]
++            );
++        }
++
++        await client.query("COMMIT");
++
++        console.log(
++            `[BILLING] ${event.type} aplicado: user=${userId} status=${row.status}`
++        );
++
++        return "applied";
++    } catch (error) {
++        await client.query("ROLLBACK").catch(() => undefined);
++        throw error;
++    } finally {
++        client.release();
++    }
++}
+diff --git a/messages/en.json b/messages/en.json
+index fc0d476..c00c869 100644
+--- a/messages/en.json
++++ b/messages/en.json
+@@ -273,5 +273,59 @@
+     "backGeneric": "← Back",
+     "accountPageDescriptionStreamer": "Manage your identity and the connections used by the streamer hub.",
+     "accountPageDescriptionUser": "Manage your data, preferences and connections."
++  },
++  "billing": {
++    "navLabel": "Subscription",
++    "back": "← My account",
++    "title": "Streamer subscription",
++    "subtitle": "Subscribe to use streamer mode, the streamer hub and your live tools.",
++    "notEnforcedNotice": "For now, streamer mode is available to everyone. Billing has not been enabled yet.",
++    "planName": "Chatteia Streamer",
++    "planTagline": "Everything you need to manage your live chat in one place.",
++    "feature1": "Streamer hub",
++    "feature2": "Multi Chat for Twitch, Kick, YouTube and TikTok",
++    "feature3": "Customizable OBS overlay",
++    "feature4": "New tools: giveaways and moderation",
++    "intervalLabel": "Billing period",
++    "intervalMonth": "Monthly",
++    "intervalYear": "Yearly",
++    "perMonth": "/month",
++    "perYear": "/year",
++    "trialBadge": "{days} days free",
++    "subscribe": "Subscribe",
++    "startTrial": "Start {days}-day free trial",
++    "redirecting": "Redirecting...",
++    "securePayment": "Secure payment processed by Stripe. Cancel anytime.",
++    "loadingPlan": "Loading prices...",
++    "unavailable": "Subscriptions are not available yet. Please try again later.",
++    "checkoutCanceled": "The payment was canceled. You can subscribe whenever you like.",
++    "checkoutProcessing": "Payment received! We're confirming your subscription, this only takes a few seconds...",
++    "checkoutDelayed": "Your subscription hasn't shown up yet. If you completed the payment, wait a moment and refresh the page; if it persists, contact support.",
++    "providerManual": "Access granted by the team.",
++    "renewsOn": "Renews on {date}",
++    "endsOn": "Access until {date} (subscription canceled)",
++    "trialEndsOn": "Free trial until {date}",
++    "pastDueWarning": "We couldn't charge your latest invoice. Update your payment method to keep your access.",
++    "activateMode": "Turn on streamer mode",
++    "activating": "Turning on...",
++    "goToHub": "Go to the streamer hub",
++    "manage": "Manage subscription",
++    "gateHint": "Streamer mode is part of the Chatteia Streamer subscription.",
++    "gateCta": "View subscription",
++    "status": {
++      "active": "Active",
++      "trialing": "Trial",
++      "past_due": "Payment past due",
++      "canceled": "Canceled",
++      "unpaid": "Unpaid",
++      "incomplete": "Incomplete",
++      "incomplete_expired": "Expired",
++      "paused": "Paused"
++    },
++    "errorUnauthenticated": "Please sign in to subscribe.",
++    "errorNotConfigured": "Subscriptions are not available yet.",
++    "errorAlreadySubscribed": "You already have an active subscription. Use \"Manage subscription\".",
++    "errorNoBillingAccount": "No subscription found to manage.",
++    "errorGeneric": "We couldn't complete that. Please try again in a moment."
+   }
+ }
+diff --git a/messages/es.json b/messages/es.json
+index 484b6dd..db51801 100644
+--- a/messages/es.json
++++ b/messages/es.json
+@@ -274,5 +274,59 @@
+     "backGeneric": "← Volver",
+     "accountPageDescriptionStreamer": "Gestiona tu identidad y las conexiones que usa el centro de streamer.",
+     "accountPageDescriptionUser": "Gestiona tus datos, preferencias y conexiones."
++  },
++  "billing": {
++    "navLabel": "Suscripción",
++    "back": "← Mi cuenta",
++    "title": "Suscripción de streamer",
++    "subtitle": "Suscríbete para usar el modo streamer, el centro del streamer y las herramientas de tu directo.",
++    "notEnforcedNotice": "Por ahora el modo streamer está disponible para todos. El cobro aún no se ha activado.",
++    "planName": "Chatteia Streamer",
++    "planTagline": "Todo para gestionar el chat de tu directo en un solo lugar.",
++    "feature1": "Centro del streamer",
++    "feature2": "Multi Chat con Twitch, Kick, YouTube y TikTok",
++    "feature3": "Overlay de OBS personalizable",
++    "feature4": "Nuevas herramientas: sorteos y moderación",
++    "intervalLabel": "Período de facturación",
++    "intervalMonth": "Mensual",
++    "intervalYear": "Anual",
++    "perMonth": "/mes",
++    "perYear": "/año",
++    "trialBadge": "{days} días gratis",
++    "subscribe": "Suscribirme",
++    "startTrial": "Empezar prueba gratis de {days} días",
++    "redirecting": "Redirigiendo...",
++    "securePayment": "Pago seguro procesado por Stripe. Cancela cuando quieras.",
++    "loadingPlan": "Cargando precios...",
++    "unavailable": "Las suscripciones aún no están disponibles. Inténtalo de nuevo más tarde.",
++    "checkoutCanceled": "El pago fue cancelado. Puedes suscribirte cuando quieras.",
++    "checkoutProcessing": "¡Pago recibido! Estamos confirmando tu suscripción, solo tarda unos segundos...",
++    "checkoutDelayed": "Tu suscripción aún no aparece. Si completaste el pago, espera un momento y actualiza la página; si sigue igual, contacta con soporte.",
++    "providerManual": "Acceso concedido por el equipo.",
++    "renewsOn": "Se renueva el {date}",
++    "endsOn": "Acceso hasta el {date} (suscripción cancelada)",
++    "trialEndsOn": "Prueba gratis hasta el {date}",
++    "pastDueWarning": "No pudimos cobrar tu última factura. Actualiza tu método de pago para no perder el acceso.",
++    "activateMode": "Activar modo streamer",
++    "activating": "Activando...",
++    "goToHub": "Ir al centro del streamer",
++    "manage": "Gestionar suscripción",
++    "gateHint": "El modo streamer forma parte de la suscripción Chatteia Streamer.",
++    "gateCta": "Ver suscripción",
++    "status": {
++      "active": "Activa",
++      "trialing": "En prueba",
++      "past_due": "Pago pendiente",
++      "canceled": "Cancelada",
++      "unpaid": "Impagada",
++      "incomplete": "Incompleta",
++      "incomplete_expired": "Expirada",
++      "paused": "Pausada"
++    },
++    "errorUnauthenticated": "Inicia sesión para suscribirte.",
++    "errorNotConfigured": "Las suscripciones aún no están disponibles.",
++    "errorAlreadySubscribed": "Ya tienes una suscripción activa. Usa \"Gestionar suscripción\".",
++    "errorNoBillingAccount": "No se encontró ninguna suscripción para gestionar.",
++    "errorGeneric": "No se pudo completar. Inténtalo de nuevo en unos instantes."
+   }
+ }
+diff --git a/messages/pt-br.json b/messages/pt-br.json
+index 6b3be75..4106834 100644
+--- a/messages/pt-br.json
++++ b/messages/pt-br.json
+@@ -274,5 +274,59 @@
+     "backGeneric": "← Voltar",
+     "accountPageDescriptionStreamer": "Gerencie sua identidade e as conexões usadas pela Central do streamer.",
+     "accountPageDescriptionUser": "Gerencie seus dados, preferências e conexões."
++  },
++  "billing": {
++    "navLabel": "Assinatura",
++    "back": "← Minha conta",
++    "title": "Assinatura do streamer",
++    "subtitle": "Assine para usar o modo streamer, a central do streamer e as ferramentas da sua live.",
++    "notEnforcedNotice": "Por enquanto o modo streamer está liberado para todos. A cobrança ainda não foi ativada.",
++    "planName": "Chatteia Streamer",
++    "planTagline": "Tudo para gerenciar o chat da sua live em um só lugar.",
++    "feature1": "Central do streamer",
++    "feature2": "Multi Chat com Twitch, Kick, YouTube e TikTok",
++    "feature3": "Overlay do OBS personalizável",
++    "feature4": "Novas ferramentas: sorteios e moderação",
++    "intervalLabel": "Período de cobrança",
++    "intervalMonth": "Mensal",
++    "intervalYear": "Anual",
++    "perMonth": "/mês",
++    "perYear": "/ano",
++    "trialBadge": "{days} dias grátis",
++    "subscribe": "Assinar",
++    "startTrial": "Começar teste grátis de {days} dias",
++    "redirecting": "Redirecionando...",
++    "securePayment": "Pagamento seguro processado pelo Stripe. Cancele quando quiser.",
++    "loadingPlan": "Carregando preços...",
++    "unavailable": "As assinaturas ainda não estão disponíveis. Tente novamente mais tarde.",
++    "checkoutCanceled": "O pagamento foi cancelado. Você pode assinar quando quiser.",
++    "checkoutProcessing": "Pagamento recebido! Estamos confirmando sua assinatura, isso leva só alguns segundos...",
++    "checkoutDelayed": "Sua assinatura ainda não apareceu. Se você concluiu o pagamento, aguarde um instante e atualize a página; caso continue assim, fale com o suporte.",
++    "providerManual": "Acesso concedido pela equipe.",
++    "renewsOn": "Renova em {date}",
++    "endsOn": "Acesso até {date} (assinatura cancelada)",
++    "trialEndsOn": "Teste grátis até {date}",
++    "pastDueWarning": "Não conseguimos cobrar sua última fatura. Atualize a forma de pagamento para não perder o acesso.",
++    "activateMode": "Ativar modo streamer",
++    "activating": "Ativando...",
++    "goToHub": "Ir para a central do streamer",
++    "manage": "Gerenciar assinatura",
++    "gateHint": "O modo streamer faz parte da assinatura do Chatteia Streamer.",
++    "gateCta": "Ver assinatura",
++    "status": {
++      "active": "Ativa",
++      "trialing": "Em teste",
++      "past_due": "Pagamento pendente",
++      "canceled": "Cancelada",
++      "unpaid": "Não paga",
++      "incomplete": "Incompleta",
++      "incomplete_expired": "Expirada",
++      "paused": "Pausada"
++    },
++    "errorUnauthenticated": "Faça login para assinar.",
++    "errorNotConfigured": "As assinaturas ainda não estão disponíveis.",
++    "errorAlreadySubscribed": "Você já possui uma assinatura ativa. Use \"Gerenciar assinatura\".",
++    "errorNoBillingAccount": "Nenhuma assinatura encontrada para gerenciar.",
++    "errorGeneric": "Não foi possível concluir. Tente novamente em instantes."
+   }
+ }
+diff --git a/messages/ru.json b/messages/ru.json
+index 0598108..c88788f 100644
+--- a/messages/ru.json
++++ b/messages/ru.json
+@@ -274,5 +274,59 @@
+     "backGeneric": "← Назад",
+     "accountPageDescriptionStreamer": "Управляйте своей личностью и подключениями, которые использует центр стримера.",
+     "accountPageDescriptionUser": "Управляйте своими данными, настройками и подключениями."
++  },
++  "billing": {
++    "navLabel": "Подписка",
++    "back": "← Мой аккаунт",
++    "title": "Подписка стримера",
++    "subtitle": "Оформите подписку, чтобы пользоваться режимом стримера, центром стримера и инструментами для эфира.",
++    "notEnforcedNotice": "Пока режим стримера доступен всем. Оплата ещё не включена.",
++    "planName": "Chatteia Streamer",
++    "planTagline": "Всё для управления чатом вашего эфира в одном месте.",
++    "feature1": "Центр стримера",
++    "feature2": "Мультичат для Twitch, Kick, YouTube и TikTok",
++    "feature3": "Настраиваемый оверлей для OBS",
++    "feature4": "Новые инструменты: розыгрыши и модерация",
++    "intervalLabel": "Период оплаты",
++    "intervalMonth": "Ежемесячно",
++    "intervalYear": "Ежегодно",
++    "perMonth": "/мес.",
++    "perYear": "/год",
++    "trialBadge": "{days} дн. бесплатно",
++    "subscribe": "Оформить подписку",
++    "startTrial": "Начать бесплатный период ({days} дн.)",
++    "redirecting": "Перенаправление...",
++    "securePayment": "Безопасная оплата через Stripe. Отменить можно в любой момент.",
++    "loadingPlan": "Загрузка цен...",
++    "unavailable": "Подписки пока недоступны. Попробуйте позже.",
++    "checkoutCanceled": "Оплата отменена. Вы можете оформить подписку в любое время.",
++    "checkoutProcessing": "Платёж получен! Подтверждаем подписку, это займёт несколько секунд...",
++    "checkoutDelayed": "Подписка пока не отображается. Если вы завершили оплату, подождите немного и обновите страницу; если ничего не изменилось, обратитесь в поддержку.",
++    "providerManual": "Доступ предоставлен командой.",
++    "renewsOn": "Продление {date}",
++    "endsOn": "Доступ до {date} (подписка отменена)",
++    "trialEndsOn": "Бесплатный период до {date}",
++    "pastDueWarning": "Не удалось списать оплату по последнему счёту. Обновите способ оплаты, чтобы не потерять доступ.",
++    "activateMode": "Включить режим стримера",
++    "activating": "Включение...",
++    "goToHub": "Перейти в центр стримера",
++    "manage": "Управление подпиской",
++    "gateHint": "Режим стримера входит в подписку Chatteia Streamer.",
++    "gateCta": "Посмотреть подписку",
++    "status": {
++      "active": "Активна",
++      "trialing": "Пробный период",
++      "past_due": "Платёж просрочен",
++      "canceled": "Отменена",
++      "unpaid": "Не оплачена",
++      "incomplete": "Не завершена",
++      "incomplete_expired": "Истекла",
++      "paused": "Приостановлена"
++    },
++    "errorUnauthenticated": "Войдите, чтобы оформить подписку.",
++    "errorNotConfigured": "Подписки пока недоступны.",
++    "errorAlreadySubscribed": "У вас уже есть активная подписка. Воспользуйтесь «Управление подпиской».",
++    "errorNoBillingAccount": "Подписка для управления не найдена.",
++    "errorGeneric": "Не удалось выполнить операцию. Попробуйте ещё раз чуть позже."
+   }
+ }
+diff --git a/package-lock.json b/package-lock.json
+index 5aac1db..de4a251 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -14,7 +14,8 @@
+         "nodemailer": "^10.0.10",
+         "pg": "^8.23.0",
+         "react": "18.3.1",
+-        "react-dom": "18.3.1"
++        "react-dom": "18.3.1",
++        "stripe": "^22.6.2"
+       },
+       "devDependencies": {
+         "@types/bcryptjs": "^2.4.6",
+@@ -2111,7 +2112,7 @@
+       "version": "20.14.10",
+       "resolved": "https://registry.npmjs.org/@types/node/-/node-20.14.10.tgz",
+       "integrity": "sha512-MdiXf+nDuMvY0gJKxyfZ7/6UFsETO7mGKF54MVD/ekJS6HdFtpZFBgrh6Pseu64XTb2MLyFPlbW6hj8HYRQNOQ==",
+-      "dev": true,
++      "devOptional": true,
+       "license": "MIT",
+       "dependencies": {
+         "undici-types": "~5.26.4"
+@@ -7213,6 +7214,23 @@
+         "url": "https://github.com/sponsors/sindresorhus"
+       }
+     },
++    "node_modules/stripe": {
++      "version": "22.6.2",
++      "resolved": "https://registry.npmjs.org/stripe/-/stripe-22.6.2.tgz",
++      "integrity": "sha512-PwRE2scocvXqDKPiskMa5vRJEAEkq46W69XyUYmAwrNSLr675lQnfqLwnsndAWizwgihOWw/irLmoFRo3ez7ew==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=18"
++      },
++      "peerDependencies": {
++        "@types/node": ">=18"
++      },
++      "peerDependenciesMeta": {
++        "@types/node": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/styled-jsx": {
+       "version": "5.1.6",
+       "resolved": "https://registry.npmjs.org/styled-jsx/-/styled-jsx-5.1.6.tgz",
+@@ -7579,7 +7597,7 @@
+       "version": "5.26.5",
+       "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-5.26.5.tgz",
+       "integrity": "sha512-JlCMO+ehdEIKqlFxk6IfVoAUVmgz7cU7zD/h9XZ0qzeosSHmUJVOzSQvvYSYWXkFXC+IfLKSIffhv0sVZup6pA==",
+-      "dev": true,
++      "devOptional": true,
+       "license": "MIT"
+     },
+     "node_modules/unrs-resolver": {
+diff --git a/package.json b/package.json
+index 8193341..a418dc3 100644
+--- a/package.json
++++ b/package.json
+@@ -17,7 +17,8 @@
+     "nodemailer": "^10.0.10",
+     "pg": "^8.23.0",
+     "react": "18.3.1",
+-    "react-dom": "18.3.1"
++    "react-dom": "18.3.1",
++    "stripe": "^22.6.2"
+   },
+   "devDependencies": {
+     "@types/bcryptjs": "^2.4.6",
+diff --git a/postgres/migrate.sh b/postgres/migrate.sh
+new file mode 100755
+index 0000000..16cf534
+--- /dev/null
++++ b/postgres/migrate.sh
+@@ -0,0 +1,58 @@
++#!/bin/sh
++# ============================================================================
++# Runner de migrations (psql puro — o container já tem postgresql-client).
++#
++# Aplica, em ordem alfabética, cada arquivo de postgres/migrations/*.sql que
++# ainda não consta em `schema_migrations`. Cada migration roda numa transação
++# única junto com o registro dela: ou aplica inteira, ou não aplica nada.
++#
++# Bancos criados antes deste runner (só com a 0001, sem `schema_migrations`)
++# funcionam sem ajuste: a 0001 é idempotente (create ... if not exists), então
++# reaplicá-la é inofensivo e ela passa a constar na tabela.
++#
++# Uso:  DATABASE_URL=postgresql://... sh postgres/migrate.sh
++#
++# Atenção: pensado para UMA instância subindo por vez (o app já é
++# single-instance por causa dos barramentos de chat em memória). Se um dia
++# rodar réplicas, suba as migrations num job separado antes do deploy.
++# ============================================================================
++set -eu
++
++: "${DATABASE_URL:?DATABASE_URL precisa estar definido}"
++
++SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
++MIGRATIONS_DIR="${MIGRATIONS_DIR:-$SCRIPT_DIR/migrations}"
++
++psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -c \
++  "create table if not exists schema_migrations (
++       version text primary key,
++       applied_at timestamptz not null default now()
++   )"
++
++for file in "$MIGRATIONS_DIR"/*.sql; do
++  [ -e "$file" ] || continue
++
++  version="$(basename "$file" .sql)"
++
++  case "$version" in
++    *[!0-9A-Za-z_-]*)
++      echo "Nome de migration inválido: $file" >&2
++      exit 1
++      ;;
++  esac
++
++  applied="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -tAc \
++    "select 1 from schema_migrations where version = '$version'")"
++
++  if [ "$applied" = "1" ]; then
++    continue
++  fi
++
++  echo "Aplicando migration $version..."
++
++  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -1 \
++    -f "$file" \
++    -c "insert into schema_migrations (version) values ('$version') on conflict do nothing"
++done
++
++echo "Migrations em dia."
+diff --git a/postgres/migrations/0002_billing.sql b/postgres/migrations/0002_billing.sql
+new file mode 100644
+index 0000000..17df0ad
+--- /dev/null
++++ b/postgres/migrations/0002_billing.sql
+@@ -0,0 +1,83 @@
++-- ============================================================================
++-- Chatteia — cobrança (assinatura do streamer)
++-- ============================================================================
++-- Uma linha por usuário em `subscriptions`. O estado vem do provedor de
++-- pagamento (Stripe) via webhook; a aplicação só LÊ esta tabela para decidir
++-- se o usuário tem direito ao modo streamer (ver lib/billing/entitlements.ts).
++--
++-- `provider = 'manual'` permite conceder acesso sem cobrança (beta testers,
++-- cortesias, você mesmo) inserindo uma linha à mão — veja o exemplo no fim.
++-- ============================================================================
++
++create table if not exists subscriptions (
++    user_id uuid primary key references users(id) on delete cascade,
++
++    provider text not null default 'stripe' check (provider in ('stripe', 'manual')),
++    provider_customer_id text,
++    provider_subscription_id text,
++
++    plan text not null default 'streamer',
++    price_id text,
++
++    -- Guardamos o status "cru" do provedor (active, trialing, past_due,
++    -- canceled, unpaid, incomplete, ...). Sem CHECK de propósito: o Stripe
++    -- pode acrescentar valores e um CHECK faria o webhook falhar em produção.
++    status text not null default 'incomplete',
++
++    current_period_end timestamptz,
++    trial_end timestamptz,
++    cancel_at_period_end boolean not null default false,
++
++    -- `created` do último evento do provedor aplicado nesta linha. Serve para
++    -- descartar eventos que chegam fora de ordem (o Stripe não garante ordem).
++    provider_event_at timestamptz,
++
++    created_at timestamptz not null default now(),
++    updated_at timestamptz not null default now(),
++
++    constraint subscriptions_stripe_needs_customer
++        check (provider <> 'stripe' or provider_customer_id is not null)
++);
++
++create unique index if not exists subscriptions_provider_customer_idx
++    on subscriptions (provider, provider_customer_id)
++    where provider_customer_id is not null;
++
++create unique index if not exists subscriptions_provider_subscription_idx
++    on subscriptions (provider, provider_subscription_id)
++    where provider_subscription_id is not null;
++
++-- ----------------------------------------------------------------------------
++-- BILLING EVENTS (idempotência do webhook)
++-- ----------------------------------------------------------------------------
++-- O Stripe reenvia eventos (timeout, 5xx). Gravamos o id do evento na MESMA
++-- transação que aplica a mudança: se já existe, o evento é ignorado.
++create table if not exists billing_events (
++    provider text not null,
++    event_id text not null,
++    event_type text not null,
++    received_at timestamptz not null default now(),
++
++    primary key (provider, event_id)
++);
++
++-- ----------------------------------------------------------------------------
++-- OPCIONAL — conceder acesso gratuito (não roda sozinho)
++-- ----------------------------------------------------------------------------
++-- Quem já usava o modo streamer antes da cobrança passa a precisar de
++-- assinatura quando BILLING_ENFORCED=true. Para manter esses usuários com
++-- acesso, rode UMA vez:
++--
++--   insert into subscriptions (user_id, provider, status, plan)
++--   select id, 'manual', 'active', 'streamer'
++--   from users
++--   where account_type = 'streamer'
++--   on conflict (user_id) do nothing;
++--
++-- Para um usuário específico (com data de validade opcional):
++--
++--   insert into subscriptions (user_id, provider, status, current_period_end)
++--   values ('<uuid>', 'manual', 'active', now() + interval '1 year')
++--   on conflict (user_id) do update
++--     set provider = 'manual', status = 'active',
++--         current_period_end = excluded.current_period_end;
+diff --git a/types/billing.ts b/types/billing.ts
+new file mode 100644
+index 0000000..0135c08
+--- /dev/null
++++ b/types/billing.ts
+@@ -0,0 +1,75 @@
++export type SubscriptionProvider = "stripe" | "manual";
++
++export type BillingInterval = "month" | "year";
++
++/**
++ * Linha da tabela `subscriptions` (ver postgres/migrations/0002_billing.sql).
++ * Nunca é enviada inteira ao navegador — use `toSubscriptionSummary`.
++ */
++export type SubscriptionRow = {
++    user_id: string;
++    provider: SubscriptionProvider;
++    provider_customer_id: string | null;
++    provider_subscription_id: string | null;
++    plan: string;
++    price_id: string | null;
++    status: string;
++    current_period_end: Date | null;
++    trial_end: Date | null;
++    cancel_at_period_end: boolean;
++    provider_event_at: Date | null;
++    created_at: Date;
++    updated_at: Date;
++};
++
++/** O que o navegador precisa saber da assinatura (sem ids do provedor). */
++export type SubscriptionSummary = {
++    provider: SubscriptionProvider;
++    plan: string;
++    status: string;
++    currentPeriodEnd: string | null;
++    trialEnd: string | null;
++    cancelAtPeriodEnd: boolean;
++};
++
++export type BillingState = {
++    /** BILLING_ENFORCED=true: o modo streamer exige assinatura. */
++    enforced: boolean;
++    /** O usuário pode usar o modo streamer agora (já considera `enforced`). */
++    entitled: boolean;
++    /** Existe assinatura viva de fato (independe de `enforced`). */
++    subscribed: boolean;
++    subscription: SubscriptionSummary | null;
++};
++
++export type PlanPrice = {
++    interval: BillingInterval;
++    amount: number; // menor unidade da moeda (centavos)
++    currency: string; // ISO minúsculo, ex.: "brl"
++};
++
++export type PlanInfo = {
++    enabled: boolean;
++    enforced: boolean;
++    trialDays: number;
++    prices: PlanPrice[];
++};
++
++export function toSubscriptionSummary(
++    row: SubscriptionRow | null
++): SubscriptionSummary | null {
++    if (!row) {
++        return null;
++    }
++
++    return {
++        provider: row.provider,
++        plan: row.plan,
++        status: row.status,
++        currentPeriodEnd: row.current_period_end
++            ? row.current_period_end.toISOString()
++            : null,
++        trialEnd: row.trial_end ? row.trial_end.toISOString() : null,
++        cancelAtPeriodEnd: row.cancel_at_period_end,
++    };
++}

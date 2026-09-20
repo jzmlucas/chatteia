@@ -192,6 +192,29 @@ export async function enableStreamerMode(
     return rows[0] ?? null;
 }
 
+/**
+ * Marca a conta como "streamer" SEM ativar o modo streamer. Usado quando o
+ * usuário se declara streamer mas ainda não tem assinatura (ver
+ * app/api/auth/profile/route.ts).
+ */
+export async function setAccountTypeStreamer(
+    userId: string
+): Promise<UserRow | null> {
+    const { rows } = await pool.query<UserRow>(
+        `
+        UPDATE users
+        SET
+            account_type = 'streamer',
+            updated_at = now()
+        WHERE id = $1
+        RETURNING *
+        `,
+        [userId]
+    );
+
+    return rows[0] ?? null;
+}
+
 function normalizeOAuthUsername(
     value: string
 ): string {

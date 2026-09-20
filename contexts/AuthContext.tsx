@@ -7,51 +7,79 @@ import {
     useState,
 } from "react";
 
+import type { BillingState } from "@/types/billing";
 import type { ActiveMode, Profile } from "@/types/user";
+
+/**
+ * Resultado de tentar entrar no modo streamer:
+ * - "ok": deu certo;
+ * - "subscription_required": falta assinatura (a UI deve levar a /billing);
+ * - "error": falha genérica (rede, sem permissão...).
+ */
+export type ModeChangeResult =
+    | "ok"
+    | "subscription_required"
+    | "error";
 
 type AuthContextValue = {
     user: { id: string; email: string } | null;
     profile: Profile | null;
+    billing: BillingState | null;
     loading: boolean;
     isStreamer: boolean;
     isStreamerMode: boolean;
+    /** Pode usar o modo streamer agora (assinatura em dia ou cobrança desligada). */
+    hasStreamerAccess: boolean;
     activeMode: ActiveMode;
     refreshProfile: () => Promise<void>;
-    setActiveMode: (mode: ActiveMode) => Promise<boolean>;
-    enableStreamerMode: () => Promise<boolean>;
+    setActiveMode: (mode: ActiveMode) => Promise<ModeChangeResult>;
+    enableStreamerMode: () => Promise<ModeChangeResult>;
     signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-async function fetchSessionProfile(): Promise<Profile | null> {
+type SessionSnapshot = {
+    profile: Profile | null;
+    billing: BillingState | null;
+};
+
+async function fetchSession(): Promise<SessionSnapshot> {
     try {
         const response = await fetch("/api/auth/session", {
             credentials: "include",
         });
 
         if (!response.ok) {
-            return null;
+            return { profile: null, billing: null };
         }
 
-        const data = (await response.json()) as { profile: Profile | null };
+        const data = (await response.json()) as {
+            profile: Profile | null;
+            billing?: BillingState;
+        };
 
-        return data.profile;
+        return {
+            profile: data.profile,
+            billing: data.billing ?? null,
+        };
     } catch {
-        return null;
+        return { profile: null, billing: null };
     }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [profile, setProfile] = useState<Profile | null>(null);
+    const [billing, setBilling] = useState<BillingState | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         let active = true;
 
-        fetchSessionProfile().then((nextProfile) => {
+        fetchSession().then((snapshot) => {
             if (active) {
-                setProfile(nextProfile);
+                setProfile(snapshot.profile);
+                setBilling(snapshot.billing);
                 setLoading(false);
             }
         });
@@ -62,24 +90,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     async function refreshProfile() {
-        const nextProfile =
-            await fetchSessionProfile();
+        const snapshot = await fetchSession();
 
-        console.log(
-            "[AUTH] Perfil após refresh:",
-            nextProfile
-        );
-
-        setProfile(nextProfile);
+        setProfile(snapshot.profile);
+        setBilling(snapshot.billing);
     }
 
-    async function setActiveModeInternal(mode: ActiveMode): Promise<boolean> {
+    async function setActiveModeInternal(
+        mode: ActiveMode
+    ): Promise<ModeChangeResult> {
         if (!profile) {
-            return false;
+            return "error";
         }
 
         if (mode === "streamer" && profile.account_type !== "streamer") {
-            return false;
+            return "error";
         }
 
         const response = await fetch("/api/auth/profile", {
@@ -89,20 +114,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             body: JSON.stringify({ active_mode: mode }),
         });
 
+        if (response.status === 402) {
+            return "subscription_required";
+        }
+
         if (!response.ok) {
-            return false;
+            return "error";
         }
 
         const data = (await response.json()) as { profile: Profile };
 
         setProfile(data.profile);
 
-        return true;
+        return "ok";
     }
 
-    async function enableStreamerModeInternal(): Promise<boolean> {
+    async function enableStreamerModeInternal(): Promise<ModeChangeResult> {
         if (!profile) {
-            return false;
+            return "error";
         }
 
         const response = await fetch("/api/auth/profile", {
@@ -113,14 +142,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (!response.ok) {
-            return false;
+            return "error";
         }
 
-        const data = (await response.json()) as { profile: Profile };
+        const data = (await response.json()) as {
+            profile: Profile;
+            subscription_required?: boolean;
+        };
 
+        // A conta já foi marcada como streamer; o modo só ativa com assinatura.
         setProfile(data.profile);
 
-        return true;
+        return data.subscription_required ? "subscription_required" : "ok";
     }
 
     async function signOut() {
@@ -130,10 +163,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         setProfile(null);
+        setBilling(null);
     }
 
+    // Sem dados de billing (ex.: resposta antiga em cache) não bloqueamos.
+    const hasStreamerAccess = billing ? billing.entitled : true;
+
     const isStreamer = profile?.account_type === "streamer";
-    const isStreamerMode = isStreamer && profile?.active_mode === "streamer";
+    const isStreamerMode =
+        isStreamer &&
+        hasStreamerAccess &&
+        profile?.active_mode === "streamer";
     const activeMode = profile?.active_mode ?? "user";
 
     const user = profile ? { id: profile.id, email: profile.email } : null;
@@ -143,9 +183,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             value={{
                 user,
                 profile,
+                billing,
                 loading,
                 isStreamer,
                 isStreamerMode,
+                hasStreamerAccess,
                 activeMode,
                 refreshProfile,
                 setActiveMode: setActiveModeInternal,

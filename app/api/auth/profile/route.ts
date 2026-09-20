@@ -7,9 +7,13 @@ import {
 
 import {
     enableStreamerMode,
+    setAccountTypeStreamer,
     setActiveMode,
     updateProfile,
 } from "@/lib/auth/users";
+
+import { hasStreamerAccess } from "@/lib/billing/entitlements";
+import { findSubscriptionByUserId } from "@/lib/billing/subscriptions";
 
 import {
     toProfile,
@@ -71,10 +75,25 @@ export async function PATCH(
         }
 
         if (body.enable_streamer_mode) {
-            const updated =
-                await enableStreamerMode(
-                    user.id
+            // Declarar-se streamer é gratuito; USAR o modo streamer exige
+            // assinatura quando BILLING_ENFORCED=true. Sem direito, marcamos
+            // a conta como streamer (para a UI oferecer a assinatura) mas
+            // mantemos o modo ativo em "user".
+            const entitled =
+                hasStreamerAccess(
+                    await findSubscriptionByUserId(
+                        user.id
+                    )
                 );
+
+            const updated =
+                entitled
+                    ? await enableStreamerMode(
+                        user.id
+                    )
+                    : await setAccountTypeStreamer(
+                        user.id
+                    );
 
             if (!updated) {
                 return NextResponse.json(
@@ -90,6 +109,8 @@ export async function PATCH(
 
             return NextResponse.json({
                 ok: true,
+                subscription_required:
+                    !entitled,
                 profile: toProfile(updated),
             });
         }
@@ -108,6 +129,26 @@ export async function PATCH(
                     },
                     {
                         status: 403,
+                    }
+                );
+            }
+
+            if (
+                body.active_mode ===
+                "streamer" &&
+                !hasStreamerAccess(
+                    await findSubscriptionByUserId(
+                        user.id
+                    )
+                )
+            ) {
+                return NextResponse.json(
+                    {
+                        error:
+                            "SUBSCRIPTION_REQUIRED",
+                    },
+                    {
+                        status: 402,
                     }
                 );
             }
