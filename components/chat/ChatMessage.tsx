@@ -245,7 +245,7 @@ export function ChatMessage({
                     isObs
                         ? "w-full"
                         : useMessageBackground
-                            ? "w-fit max-w-[80%] gap-1 text-sm rounded-2xl border border-zinc-800/80 bg-zinc-900/80 px-3 py-2 shadow-sm backdrop-blur-sm"
+                            ? "w-fit max-w-[80%] gap-1 text-sm border border-zinc-800/80 bg-zinc-900/80 px-3 py-2 shadow-sm backdrop-blur-sm"
                             : "gap-1 text-sm",
                     animationClass,
                 ].join(" ")}
@@ -370,7 +370,7 @@ export function ChatMessage({
                             {activity >= 70 && (
                                 <>
                                     <span
-                                        className="absolute pointer-events-none rounded-full"
+                                        className="absolute pointer-events-none"
                                         style={{
                                             inset:
                                                 "-3px -6px",

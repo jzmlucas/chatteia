@@ -71,15 +71,11 @@ export default function HomePage() {
                         onChannelChange={setChannel}
                         secondPlatform={secondPlatform}
                         secondChannel={secondChannel}
-                        onSecondChannelChange={
-                            setSecondChannel
-                        }
+                        onSecondChannelChange={setSecondChannel}
                         multi={multi}
                         onMultiChange={setMulti}
                         error={error}
-                        channelPlaceholder={
-                            channelPlaceholder
-                        }
+                        channelPlaceholder={channelPlaceholder}
                         secondChannelPlaceholder={
                             secondChannelPlaceholder
                         }
