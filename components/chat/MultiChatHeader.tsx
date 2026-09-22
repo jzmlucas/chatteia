@@ -22,7 +22,7 @@ import {
 type MultiChatHeaderProps = {
     targets: ChatTarget[];
     connectedCount: number;
-    obsUrl: string;
+    onGenerateObsUrl: () => Promise<string>;
     filter: string;
     onFilterChange: (value: string) => void;
     showAdd: boolean;
@@ -48,7 +48,7 @@ type MultiChatHeaderProps = {
 export function MultiChatHeader({
     targets,
     connectedCount,
-    obsUrl,
+    onGenerateObsUrl,
     filter,
     onFilterChange,
     showAdd,
@@ -226,9 +226,10 @@ export function MultiChatHeader({
 
                 <div className="ml-auto flex items-center gap-2">
                     <CopyObsLinkButton
-                        url={obsUrl}
+                        getUrl={onGenerateObsUrl}
                         label={to("copyLink")}
                         copiedLabel={to("linkCopied")}
+                        errorLabel={to("linkError")}
                     />
 
                     <input

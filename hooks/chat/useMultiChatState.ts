@@ -579,20 +579,80 @@ export function useMultiChatState() {
                 "connected"
         ).length;
 
-    const obsChannels =
-        targets
-            .map(targetKey)
-            .join(",");
+    const [obsLinkLoading, setObsLinkLoading] =
+        useState(false);
 
-    const obsUrl =
-        typeof window !==
-        "undefined"
-            ? `${window.location.origin}/${locale}/obs/multi-chat?channels=${encodeURIComponent(
-                obsChannels
-            )}`
-            : `/${locale}/obs/multi-chat?channels=${encodeURIComponent(
-                obsChannels
+    const [obsLinkError, setObsLinkError] =
+        useState(false);
+
+    /**
+     * O overlay do OBS não tem cookie de sessão (é um browser source, sem
+     * login) — por isso o link não pode simplesmente embutir os nomes dos
+     * canais em texto puro (`?channels=...`), qualquer um poderia usar a
+     * feature paga só copiando a URL sem ser assinante. Em vez disso,
+     * pedimos um token assinado ao servidor (que confere plano streamer) e
+     * é ele que vai na URL. Ver app/api/obs/multi-chat-link/route.ts.
+     */
+    async function generateObsUrl(): Promise<string> {
+        setObsLinkLoading(true);
+        setObsLinkError(false);
+
+        try {
+            const response = await fetch(
+                "/api/obs/multi-chat-link",
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                    },
+                    body: JSON.stringify({
+                        channels:
+                            targets.map(
+                                targetKey
+                            ),
+                    }),
+                }
+            );
+
+            const data =
+                (await response
+                    .json()
+                    .catch(
+                        () => ({})
+                    )) as {
+                    token?: string;
+                };
+
+            if (
+                !response.ok ||
+                !data.token
+            ) {
+                throw new Error(
+                    "obs_link_failed"
+                );
+            }
+
+            const origin =
+                typeof window !==
+                "undefined"
+                    ? window.location
+                        .origin
+                    : "";
+
+            return `${origin}/${locale}/obs/multi-chat?token=${encodeURIComponent(
+                data.token
             )}`;
+        } catch {
+            setObsLinkError(true);
+            throw new Error(
+                "obs_link_failed"
+            );
+        } finally {
+            setObsLinkLoading(false);
+        }
+    }
 
     const channelPlaceholder =
         platform ===
@@ -628,7 +688,9 @@ export function useMultiChatState() {
         setAddError,
         feedMessages,
         connectedCount,
-        obsUrl,
+        generateObsUrl,
+        obsLinkLoading,
+        obsLinkError,
         channelPlaceholder,
         addChannel,
         removeTarget,

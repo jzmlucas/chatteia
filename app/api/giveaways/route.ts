@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSessionUser } from "@/lib/auth/getSessionUser";
-import { findUserById } from "@/lib/auth/users";
-import { hasStreamerAccess } from "@/lib/billing/entitlements";
-import { findSubscriptionByUserId } from "@/lib/billing/subscriptions";
+import { requireStreamerAccess } from "@/lib/billing/requireStreamerAccess";
 import { giveawayRepo } from "@/lib/repositories/giveaways";
 import {
     GIVEAWAY_CHANNEL_NAME_MAX_LENGTH,
@@ -19,39 +16,6 @@ export const dynamic = "force-dynamic";
 
 function fail(error: string, status: number) {
     return NextResponse.json({ error }, { status });
-}
-
-/**
- * Confere sessão + conta streamer + direito de uso (mesma regra usada em
- * /api/auth/profile e no gate de /profile — ver lib/billing/entitlements.ts).
- * Devolve o id do usuário ou uma resposta de erro pronta para retornar.
- */
-async function requireStreamerAccess(request: NextRequest) {
-    const sessionUser = await getSessionUser(request);
-
-    if (!sessionUser) {
-        return { error: fail("UNAUTHENTICATED", 401) } as const;
-    }
-
-    const user = await findUserById(sessionUser.id);
-
-    if (!user) {
-        return { error: fail("UNAUTHENTICATED", 401) } as const;
-    }
-
-    if (user.account_type !== "streamer") {
-        return { error: fail("NOT_A_STREAMER_ACCOUNT", 403) } as const;
-    }
-
-    const entitled = hasStreamerAccess(
-        await findSubscriptionByUserId(user.id)
-    );
-
-    if (!entitled) {
-        return { error: fail("SUBSCRIPTION_REQUIRED", 402) } as const;
-    }
-
-    return { userId: user.id } as const;
 }
 
 export async function GET(request: NextRequest) {

@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSessionUser } from "@/lib/auth/getSessionUser";
-import { findUserById } from "@/lib/auth/users";
-import { hasStreamerAccess } from "@/lib/billing/entitlements";
-import { findSubscriptionByUserId } from "@/lib/billing/subscriptions";
+import { requireStreamerAccess } from "@/lib/billing/requireStreamerAccess";
 import { giveawayRepo } from "@/lib/repositories/giveaways";
 import { toGiveawaySummary } from "@/types/giveaway";
 
@@ -23,20 +20,10 @@ function fail(error: string, status: number) {
  * e grava o resultado via `giveawayRepo.updateStatus(userId, "closed", winner)`.
  */
 export async function PATCH(request: NextRequest) {
-    const sessionUser = await getSessionUser(request);
+    const access = await requireStreamerAccess(request);
 
-    if (!sessionUser) {
-        return fail("UNAUTHENTICATED", 401);
-    }
-
-    const user = await findUserById(sessionUser.id);
-
-    if (!user || user.account_type !== "streamer") {
-        return fail("NOT_A_STREAMER_ACCOUNT", 403);
-    }
-
-    if (!hasStreamerAccess(await findSubscriptionByUserId(user.id))) {
-        return fail("SUBSCRIPTION_REQUIRED", 402);
+    if ("error" in access) {
+        return access.error;
     }
 
     let body: { status?: unknown };
@@ -51,7 +38,7 @@ export async function PATCH(request: NextRequest) {
         return fail("INVALID_STATUS", 400);
     }
 
-    const existing = await giveawayRepo.findByOwner(user.id);
+    const existing = await giveawayRepo.findByOwner(access.userId);
 
     if (!existing) {
         return fail("GIVEAWAY_NOT_CONFIGURED", 404);
@@ -61,7 +48,7 @@ export async function PATCH(request: NextRequest) {
         return fail("EMPTY_CHANNELS", 400);
     }
 
-    const updated = await giveawayRepo.updateStatus(user.id, body.status);
+    const updated = await giveawayRepo.updateStatus(access.userId, body.status);
 
     if (!updated) {
         return fail("GIVEAWAY_NOT_CONFIGURED", 404);

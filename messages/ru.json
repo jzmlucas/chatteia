@@ -86,11 +86,13 @@
         "errorInvalidTikTokChannel": "Недопустимый канал TikTok.",
         "errorDuplicateChannel": "Этот канал уже добавлен в Multi-chat.",
         "errorMaxChannels": "В Multi-chat можно добавить не более 4 каналов.",
-        "dragChatsHere": "Перетащите чаты сюда"
+        "dragChatsHere": "Перетащите чаты сюда",
+        "title": "Мульти-чат"
     },
     "obs": {
         "copyLink": "+ OBS",
-        "linkCopied": "Ссылка скопирована!"
+        "linkCopied": "Ссылка скопирована!",
+        "linkError": "Не удалось создать ссылку"
     },
     "kick": {
         "authorizationRequired": "Этот стример ещё не авторизовал Chatteia.",

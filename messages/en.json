@@ -85,11 +85,14 @@
         "errorInvalidTikTokChannel": "Invalid TikTok channel.",
         "errorDuplicateChannel": "This channel is already in Multi-chat.",
         "errorMaxChannels": "Multi-chat allows a maximum of 4 channels.",
-        "dragChatsHere": "Drag chats here"
+        "dragChatsHere": "Drag chats here",
+        "title": "Multi Chat",
+        "tiktokChannelPlaceholder": "Name or @username on TikTok"
     },
     "obs": {
         "copyLink": "+ OBS",
-        "linkCopied": "Link copied!"
+        "linkCopied": "Link copied!",
+        "linkError": "Couldn't generate link"
     },
     "kick": {
         "authorizationRequired": "This streamer has not authorized Chatteia yet.",
