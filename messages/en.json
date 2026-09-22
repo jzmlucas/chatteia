@@ -328,7 +328,12 @@
         "errorNotConfigured": "Subscriptions are not available yet.",
         "errorAlreadySubscribed": "You already have an active subscription. Use \"Manage subscription\".",
         "errorNoBillingAccount": "No subscription found to manage.",
-        "errorGeneric": "We couldn't complete that. Please try again in a moment."
+        "errorGeneric": "We couldn't complete that. Please try again in a moment.",
+        "navLabelUpsell": "Subscribe",
+        "navBadge": "New",
+        "upsellTitle": "Unlock everything in Chatteia Streamer",
+        "upsellDesc": "Watermark-free overlay, full multi-chat and cross-platform giveaways — starting from a simple plan.",
+        "upsellCta": "See plans"
     },
     "giveaways": {
         "title": "Cross-platform giveaway",

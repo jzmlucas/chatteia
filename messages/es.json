@@ -329,7 +329,12 @@
         "errorNotConfigured": "Las suscripciones aún no están disponibles.",
         "errorAlreadySubscribed": "Ya tienes una suscripción activa. Usa \"Gestionar suscripción\".",
         "errorNoBillingAccount": "No se encontró ninguna suscripción para gestionar.",
-        "errorGeneric": "No se pudo completar. Inténtalo de nuevo en unos instantes."
+        "errorGeneric": "No se pudo completar. Inténtalo de nuevo en unos instantes.",
+        "navLabelUpsell": "Suscribirme",
+        "navBadge": "Nuevo",
+        "upsellTitle": "Desbloquea todo Chatteia Streamer",
+        "upsellDesc": "Overlay sin marca de agua, multi-chat completo y sorteos multiplataforma — desde un plan simple.",
+        "upsellCta": "Ver planes"
     },
     "giveaways": {
         "title": "Sorteo multiplataforma",

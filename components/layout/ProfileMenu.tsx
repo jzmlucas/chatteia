@@ -223,6 +223,10 @@ export function ProfileMenu() {
         isStreamer &&
         isStreamerMode;
 
+    const showUpsellBadge =
+        isStreamer &&
+        !billing?.subscribed;
+
     return (
         <div
             ref={containerRef}
@@ -240,7 +244,7 @@ export function ProfileMenu() {
                 aria-label={tSettings(
                     "open"
                 )}
-                className="flex items-center justify-center outline-none ring-[#F55376] transition-shadow focus-visible:ring-2"
+                className="relative flex items-center justify-center outline-none ring-[#F55376] transition-shadow focus-visible:ring-2"
             >
                 <AvatarIcon
                     avatarUrl={
@@ -249,6 +253,13 @@ export function ProfileMenu() {
                     label={displayLabel}
                     size={40}
                 />
+
+                {showUpsellBadge && (
+                    <span
+                        aria-hidden="true"
+                        className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-twitch-dark bg-[#F55376]"
+                    />
+                )}
             </button>
 
             {open && (
@@ -349,20 +360,31 @@ export function ProfileMenu() {
                                         </Link>
                                     )}
 
-                                    {isStreamer &&
-                                        billing?.enforced && (
-                                            <Link
-                                                href="/billing"
-                                                onClick={() =>
-                                                    setOpen(
-                                                        false
-                                                    )
-                                                }
-                                                className="block px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white"
-                                            >
-                                                {tBilling("navLabel")}
-                                            </Link>
-                                        )}
+                                    {isStreamer && (
+                                        <Link
+                                            href="/billing"
+                                            onClick={() =>
+                                                setOpen(
+                                                    false
+                                                )
+                                            }
+                                            className={`flex items-center justify-between px-4 py-2.5 text-sm transition-colors hover:bg-zinc-800 ${
+                                                billing?.subscribed
+                                                    ? "text-zinc-300 hover:text-white"
+                                                    : "font-semibold text-[#F55376] hover:text-[#F55376]"
+                                            }`}
+                                        >
+                                            {billing?.subscribed
+                                                ? tBilling("navLabel")
+                                                : tBilling("navLabelUpsell")}
+
+                                            {!billing?.subscribed && (
+                                                <span className="ml-2 rounded-full bg-[#F55376]/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#F55376]">
+                                                    {tBilling("navBadge")}
+                                                </span>
+                                            )}
+                                        </Link>
+                                    )}
                                 </div>
 
                                 <div className="border-b border-twitch-border px-4 py-3">

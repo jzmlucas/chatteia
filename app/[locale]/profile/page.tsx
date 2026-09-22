@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { AvatarIcon } from "@/components/layout/AvatarIcon";
+import { BillingUpsellBanner } from "@/components/billing/BillingUpsellBanner";
 
 type PlatformId =
     | "kick"
@@ -305,6 +306,8 @@ export default function ProfilePage() {
                                 {tp("hubSubtitle")}
                             </p>
                         </div>
+
+                        <BillingUpsellBanner />
 
                         <div className="grid gap-3 sm:grid-cols-2">
                             <Link

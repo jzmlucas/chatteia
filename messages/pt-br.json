@@ -329,7 +329,12 @@
         "errorNotConfigured": "As assinaturas ainda não estão disponíveis.",
         "errorAlreadySubscribed": "Você já possui uma assinatura ativa. Use \"Gerenciar assinatura\".",
         "errorNoBillingAccount": "Nenhuma assinatura encontrada para gerenciar.",
-        "errorGeneric": "Não foi possível concluir. Tente novamente em instantes."
+        "errorGeneric": "Não foi possível concluir. Tente novamente em instantes.",
+        "navLabelUpsell": "Assinar plano",
+        "navBadge": "Novo",
+        "upsellTitle": "Desbloqueie tudo do Chatteia Streamer",
+        "upsellDesc": "Overlay sem marca d'água, multi-chat completo e sorteios multiplataforma — a partir de um plano simples.",
+        "upsellCta": "Ver planos"
     },
     "giveaways": {
         "title": "Sorteio multiplataforma",
