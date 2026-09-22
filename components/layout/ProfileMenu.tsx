@@ -335,6 +335,20 @@ export function ProfileMenu() {
                                         </Link>
                                     )}
 
+                                    {isStreamer && (
+                                        <Link
+                                            href="/giveaways"
+                                            onClick={() =>
+                                                setOpen(
+                                                    false
+                                                )
+                                            }
+                                            className="block px-4 py-2.5 text-sm text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white"
+                                        >
+                                            {t("navGiveaways")}
+                                        </Link>
+                                    )}
+
                                     {isStreamer &&
                                         billing?.enforced && (
                                             <Link

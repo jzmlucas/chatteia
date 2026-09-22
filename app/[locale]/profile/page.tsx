@@ -367,7 +367,10 @@ export default function ProfilePage() {
                                 </div>
                             )}
 
-                            <div className="border border-dashed border-twitch-border bg-twitch-panel p-5 opacity-70">
+                            <Link
+                                href="/giveaways"
+                                className="group border border-twitch-border bg-twitch-panel p-5 transition-colors hover:border-[#F55376]/50"
+                            >
                                 <div className="mb-4 flex h-10 w-10 items-center justify-center border border-yellow-500/30 bg-yellow-500/10 text-xs font-bold text-yellow-300">
                                     🎁
                                 </div>
@@ -380,10 +383,10 @@ export default function ProfilePage() {
                                     {tp("giveawaysCardDesc")}
                                 </p>
 
-                                <span className="mt-4 block text-xs text-zinc-600">
-                                    {tp("comingSoon")}
+                                <span className="mt-4 block text-xs font-medium text-zinc-400 transition-colors group-hover:text-[#F55376]">
+                                    {tp("openGiveawaysLink")}
                                 </span>
-                            </div>
+                            </Link>
 
                             <div className="border border-dashed border-twitch-border bg-twitch-panel p-5 opacity-70">
                                 <div className="mb-4 flex h-10 w-10 items-center justify-center border border-red-500/30 bg-red-500/10 text-xs font-bold text-red-300">
