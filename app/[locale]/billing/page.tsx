@@ -19,7 +19,6 @@ const POLL_MAX_ATTEMPTS = 15;
 function formatPrice(price: PlanPrice, locale: string): string {
     const currency = price.currency.toUpperCase();
 
-    // Moedas sem centavos (ex.: JPY) não dividem por 100.
     const digits =
         new Intl.NumberFormat("en", {
             style: "currency",
@@ -35,6 +34,32 @@ function formatPrice(price: PlanPrice, locale: string): string {
 function formatDate(iso: string, locale: string): string {
     return new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(
         new Date(iso)
+    );
+}
+
+function SuccessIcon() {
+    return (
+        <div className="relative mx-auto flex h-20 w-20 items-center justify-center">
+            <div className="absolute inset-0 animate-pulse rounded-full bg-[#F55376]/10" />
+
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-full border border-[#F55376]/30 bg-[#F55376]/10">
+                <svg
+                    width="30"
+                    height="30"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                >
+                    <path
+                        d="M5 12.5L9.5 17L19 7.5"
+                        stroke="#F55376"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                </svg>
+            </div>
+        </div>
     );
 }
 
@@ -64,13 +89,14 @@ function BillingContent() {
     const [busy, setBusy] = useState<
         "checkout" | "portal" | "activate" | null
     >(null);
+
     const [errorCode, setErrorCode] = useState<string | null>(null);
+
     const [waiting, setWaiting] = useState(checkoutParam === "success");
 
     const subscribed = billing?.subscribed ?? false;
     const subscription = billing?.subscription ?? null;
 
-    // Preços vêm do Stripe (via /api/billing/plan) — nada hardcoded aqui.
     useEffect(() => {
         let active = true;
 
@@ -107,8 +133,13 @@ function BillingContent() {
         };
     }, []);
 
-    // Voltou do Stripe: o webhook pode levar alguns segundos. Consultamos a
-    // sessão até a assinatura aparecer (ou desistimos e avisamos).
+    /*
+     * Voltou do Stripe.
+     *
+     * O webhook pode levar alguns segundos para atualizar
+     * a assinatura no banco. Por isso continuamos consultando
+     * o perfil até a assinatura aparecer.
+     */
     useEffect(() => {
         if (checkoutParam !== "success") {
             return;
@@ -148,7 +179,9 @@ function BillingContent() {
             const response = await fetch(endpoint, {
                 method: "POST",
                 credentials: "include",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                },
                 body: JSON.stringify(body),
             });
 
@@ -158,7 +191,6 @@ function BillingContent() {
             };
 
             if (response.ok && data.url) {
-                // Sai do app (Stripe). Mantém "busy" até a navegação acontecer.
                 window.location.assign(data.url);
                 return;
             }
@@ -205,12 +237,16 @@ function BillingContent() {
         switch (code) {
             case "UNAUTHENTICATED":
                 return t("errorUnauthenticated");
+
             case "BILLING_NOT_CONFIGURED":
                 return t("errorNotConfigured");
+
             case "ALREADY_SUBSCRIBED":
                 return t("errorAlreadySubscribed");
+
             case "NO_BILLING_ACCOUNT":
                 return t("errorNoBillingAccount");
+
             default:
                 return t("errorGeneric");
         }
@@ -234,6 +270,212 @@ function BillingContent() {
         t("feature4"),
     ];
 
+    /*
+     * ============================================================
+     * CHECKOUT SUCCESS
+     * ============================================================
+     *
+     * Essa tela aparece somente quando:
+     *
+     * ?checkout=success
+     *
+     * e o webhook já confirmou a assinatura.
+     */
+    if (
+        checkoutParam === "success" &&
+        !waiting &&
+        subscribed &&
+        subscription
+    ) {
+        return (
+            <main className="relative flex min-h-screen flex-col items-center overflow-hidden px-4 py-8">
+                {/* Glow decorativo */}
+                <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-1/2 top-[-180px] h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#F55376]/10 blur-[120px]"
+                />
+
+                <div className="relative z-10 w-full max-w-xl">
+                    <HomeLogoLink />
+
+                    <div className="mt-14 overflow-hidden border border-twitch-border bg-twitch-panel shadow-2xl shadow-black/30">
+                        {/* Top accent */}
+                        <div className="h-1 w-full bg-[#F55376]" />
+
+                        <div className="px-6 py-10 text-center sm:px-10 sm:py-12">
+                            <SuccessIcon />
+
+                            <div className="mt-6">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#F55376]">
+                                    {t("checkoutSuccessEyebrow")}
+                                </p>
+
+                                <h1 className="mt-3 text-3xl font-bold tracking-tight text-zinc-100 sm:text-4xl">
+                                    {t("checkoutSuccessTitle")}
+                                </h1>
+
+                                <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-zinc-400">
+                                    {t("checkoutSuccessDescription")}
+                                </p>
+                            </div>
+
+                            {/* Subscription summary */}
+                            <div className="mt-8 border border-twitch-border bg-zinc-950/50 p-5 text-left">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div>
+                                        <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-600">
+                                            {t("checkoutSuccessPlanLabel")}
+                                        </p>
+
+                                        <p className="mt-1 text-base font-semibold text-zinc-100">
+                                            {t("planName")}
+                                        </p>
+                                    </div>
+
+                                    <span className="inline-flex items-center gap-1.5 bg-[#F55376]/10 px-2.5 py-1 text-[11px] font-medium text-[#F55376]">
+                                        <span
+                                            aria-hidden="true"
+                                            className="h-1.5 w-1.5 rounded-full bg-[#F55376]"
+                                        />
+                                        {statusLabel(subscription.status)}
+                                    </span>
+                                </div>
+
+                                {subscription.status === "trialing" &&
+                                    subscription.trialEnd && (
+                                        <div className="mt-5 border-t border-zinc-800 pt-4">
+                                            <p className="text-xs text-zinc-500">
+                                                {t("trialEndsOn", {
+                                                    date: formatDate(
+                                                        subscription.trialEnd,
+                                                        intlLocale
+                                                    ),
+                                                })}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                {subscription.currentPeriodEnd &&
+                                    subscription.status !== "trialing" && (
+                                        <div className="mt-5 border-t border-zinc-800 pt-4">
+                                            <p className="text-xs text-zinc-500">
+                                                {subscription.cancelAtPeriodEnd
+                                                    ? t("endsOn", {
+                                                          date: formatDate(
+                                                              subscription.currentPeriodEnd,
+                                                              intlLocale
+                                                          ),
+                                                      })
+                                                    : t("renewsOn", {
+                                                          date: formatDate(
+                                                              subscription.currentPeriodEnd,
+                                                              intlLocale
+                                                          ),
+                                                      })}
+                                            </p>
+                                        </div>
+                                    )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="mt-6 space-y-3">
+                                {!isStreamerMode ? (
+                                    <button
+                                        type="button"
+                                        onClick={handleActivate}
+                                        disabled={busy !== null}
+                                        className="flex w-full items-center justify-center gap-2 border border-[#F55376] bg-[#F55376] px-5 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#ff6685] hover:shadow-lg hover:shadow-[#F55376]/10 disabled:cursor-wait disabled:opacity-60"
+                                    >
+                                        {busy === "activate" ? (
+                                            <>
+                                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                                {t("activating")}
+                                            </>
+                                        ) : (
+                                            t("activateMode")
+                                        )}
+                                    </button>
+                                ) : (
+                                    <Link
+                                        href="/profile"
+                                        className="block w-full border border-[#F55376] bg-[#F55376] px-5 py-3 text-center text-sm font-semibold text-white transition-all duration-200 hover:bg-[#ff6685] hover:shadow-lg hover:shadow-[#F55376]/10"
+                                    >
+                                        {t("goToHub")}
+                                    </Link>
+                                )}
+
+                                {subscription.provider === "stripe" && (
+                                    <button
+                                        type="button"
+                                        onClick={handleManage}
+                                        disabled={busy !== null}
+                                        className="w-full border border-twitch-border px-5 py-3 text-sm font-medium text-zinc-300 transition-all duration-200 hover:border-zinc-500 hover:bg-zinc-900 hover:text-white disabled:cursor-wait disabled:opacity-60"
+                                    >
+                                        {busy === "portal"
+                                            ? t("redirecting")
+                                            : t("manage")}
+                                    </button>
+                                )}
+                            </div>
+
+                            <p className="mt-7 text-[11px] leading-5 text-zinc-600">
+                                {t("checkoutSuccessFooter")}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mt-5 text-center">
+                        <Link
+                            href="/account"
+                            className="text-xs text-zinc-600 transition-colors hover:text-zinc-300"
+                        >
+                            {t("back")}
+                        </Link>
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
+    /*
+     * ============================================================
+     * CHECKOUT PROCESSANDO
+     * ============================================================
+     */
+
+    if (checkoutParam === "success" && waiting && !subscribed) {
+        return (
+            <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-8">
+                <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-1/2 top-1/2 h-[350px] w-[350px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#F55376]/5 blur-[110px]"
+                />
+
+                <div className="relative w-full max-w-md text-center">
+                    <HomeLogoLink />
+
+                    <div className="mt-16 border border-twitch-border bg-twitch-panel p-8 shadow-2xl">
+                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#F55376]/20 bg-[#F55376]/5">
+                            <span className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-700 border-t-[#F55376]" />
+                        </div>
+
+                        <h1 className="mt-7 text-2xl font-bold text-zinc-100">
+                            {t("checkoutProcessingTitle")}
+                        </h1>
+
+                        <p className="mt-3 text-sm leading-6 text-zinc-500">
+                            {t("checkoutProcessing")}
+                        </p>
+
+                        <div className="mt-6 h-1 overflow-hidden bg-zinc-900">
+                            <div className="h-full w-1/2 animate-pulse bg-[#F55376]" />
+                        </div>
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
     return (
         <main className="flex min-h-screen flex-col items-center px-4 py-8">
             <HomeLogoLink />
@@ -250,7 +492,9 @@ function BillingContent() {
                     {t("title")}
                 </h1>
 
-                <p className="mt-1 text-sm text-zinc-500">{t("subtitle")}</p>
+                <p className="mt-1 text-sm text-zinc-500">
+                    {t("subtitle")}
+                </p>
             </div>
 
             <div className="w-full max-w-lg space-y-4">
@@ -266,20 +510,13 @@ function BillingContent() {
                     </p>
                 )}
 
-                {checkoutParam === "success" && waiting && !subscribed && (
-                    <p
-                        role="status"
-                        className="border border-[#F55376]/30 bg-[#F55376]/10 px-4 py-3 text-xs text-zinc-200"
-                    >
-                        {t("checkoutProcessing")}
-                    </p>
-                )}
-
-                {checkoutParam === "success" && !waiting && !subscribed && (
-                    <p className="border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-xs text-yellow-200">
-                        {t("checkoutDelayed")}
-                    </p>
-                )}
+                {checkoutParam === "success" &&
+                    !waiting &&
+                    !subscribed && (
+                        <p className="border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-xs text-yellow-200">
+                            {t("checkoutDelayed")}
+                        </p>
+                    )}
 
                 {errorCode && (
                     <p
@@ -435,7 +672,10 @@ function BillingContent() {
                         <div className="mt-5 min-h-[3rem]">
                             {selectedPrice ? (
                                 <p className="text-3xl font-bold text-zinc-100">
-                                    {formatPrice(selectedPrice, intlLocale)}
+                                    {formatPrice(
+                                        selectedPrice,
+                                        intlLocale
+                                    )}
                                     <span className="ml-1 text-sm font-normal text-zinc-500">
                                         {selectedPrice.interval === "year"
                                             ? t("perYear")
