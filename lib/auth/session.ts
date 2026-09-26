@@ -15,17 +15,12 @@ export const SESSION_COOKIE_NAME =
 const SESSION_DURATION_MS =
     1000 * 60 * 60 * 24 * 30;
 
-const RENEW_THRESHOLD_MS =
-    1000 * 60 * 60 * 24 * 15;
-
 export type SessionValidationResult =
     | {
         user: UserRow;
-        freshToken: string | null;
     }
     | {
         user: null;
-        freshToken: null;
     };
 
 export async function createSession(
@@ -96,7 +91,6 @@ export async function validateSessionToken(
     if (!session) {
         return {
             user: null,
-            freshToken: null,
         };
     }
 
@@ -119,7 +113,6 @@ export async function validateSessionToken(
 
         return {
             user: null,
-            freshToken: null,
         };
     }
 
@@ -140,40 +133,11 @@ export async function validateSessionToken(
     if (!user) {
         return {
             user: null,
-            freshToken: null,
         };
-    }
-
-    let freshToken:
-        string | null = null;
-
-    if (
-        expiresAt.getTime() -
-        Date.now() <
-        RENEW_THRESHOLD_MS
-    ) {
-        const newExpiresAt =
-            new Date(
-                Date.now() +
-                SESSION_DURATION_MS
-            );
-
-        await pool.query(
-            `
-            UPDATE sessions
-            SET expires_at = $2
-            WHERE token_hash = $1
-            `,
-            [
-                tokenHash,
-                newExpiresAt,
-            ]
-        );
     }
 
     return {
         user,
-        freshToken,
     };
 }
 

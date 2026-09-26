@@ -455,7 +455,8 @@ export function useKickMultiChat(
                 };
               }
           );
-        } catch {
+        } catch (error) {
+          console.error("[KICK] Falha ao processar mensagem SSE:", error);
         }
       };
 

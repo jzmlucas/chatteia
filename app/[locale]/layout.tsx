@@ -54,15 +54,11 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-      <html lang={locale}>
-      <body className="bg-twitch-dark text-zinc-100 min-h-screen">
-      <NextIntlClientProvider locale={locale} messages={messages}>
-        <AuthProvider>
-          <GlobalHeader />
-          {children}
-        </AuthProvider>
-      </NextIntlClientProvider>
-      </body>
-      </html>
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <AuthProvider>
+        <GlobalHeader />
+        {children}
+      </AuthProvider>
+    </NextIntlClientProvider>
   );
 }

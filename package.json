@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "tsc --noEmit",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -30,6 +30,11 @@
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "@types/react": "18.3.3",
+    "@typescript-eslint/parser": "^8.31.0",
+    "@typescript-eslint/eslint-plugin": "^8.31.0",
+    "@eslint/js": "^9.24.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.15.0",
     "autoprefixer": "10.4.19",
     "eslint": "^9.24.0",
     "eslint-config-next": "16.3.3",
