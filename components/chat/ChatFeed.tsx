@@ -88,6 +88,10 @@ export function ChatFeed({
                     displayName: message.displayName,
                     message: message.message,
                 }),
+            }).then((response) => {
+                if (!response.ok && process.env.NODE_ENV !== "production") {
+                    console.warn("[GIVEAWAY] Não foi possível registrar a mensagem:", response.status);
+                }
             }).catch(() => undefined);
         }
 

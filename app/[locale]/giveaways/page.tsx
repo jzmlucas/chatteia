@@ -321,6 +321,30 @@ export default function GiveawaysPage() {
                     </p>
                 )}
 
+                <section className="mb-5 grid gap-3 sm:grid-cols-3">
+                    <div className="border border-twitch-border bg-twitch-panel p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{t("status.open")}</p>
+                        <p className={`mt-2 text-lg font-semibold ${isOpen ? "text-emerald-300" : "text-zinc-300"}`}>
+                            {isOpen ? t("liveStatus") : t(`status.${giveaway?.status ?? "draft"}`)}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-500">
+                            {isOpen ? t("entrySourceHint") : t("waitingStatus")}
+                        </p>
+                    </div>
+                    <div className="border border-twitch-border bg-twitch-panel p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{t("participantsLabel")}</p>
+                        <p className="mt-2 text-3xl font-semibold text-zinc-100">{giveaway?.participants.length ?? 0}</p>
+                        <p className="mt-1 text-xs text-zinc-500">{t("participantsCount", { count: giveaway?.participants.length ?? 0 })}</p>
+                    </div>
+                    <div className="border border-twitch-border bg-twitch-panel p-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{t("triggerLabel")}</p>
+                        <p className="mt-2 truncate text-lg font-semibold text-[#F55376]">{trigger || "—"}</p>
+                        <p className="mt-1 truncate text-xs text-zinc-500">
+                            {t("triggerPreview", { trigger: trigger || "—", plainTrigger: trigger.replace(/^!+/, "") || "—" })}
+                        </p>
+                    </div>
+                </section>
+
                 <section className="border border-twitch-border bg-twitch-panel p-6">
                     <div className="flex items-center justify-between gap-3">
                         <label htmlFor="trigger" className="text-sm font-semibold text-zinc-100">
@@ -504,14 +528,15 @@ export default function GiveawaysPage() {
                                 </p>
                             )}
 
-                            <div className="mt-3 flex flex-wrap gap-2">
+                            <div className="mt-3 grid max-h-72 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
                                 {giveaway.participants.map((participant) => (
                                     <span
                                         key={`${participant.platform}:${participant.username}`}
-                                        className="border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-200"
+                                        className="flex items-center justify-between gap-3 border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200"
                                         title={`${participant.displayName} · ${participant.platform}`}
                                     >
-                                        {participant.displayName}
+                                        <span className="truncate font-medium">{participant.displayName}</span>
+                                        <span className="shrink-0 text-[10px] uppercase text-zinc-500">{participant.platform}</span>
                                     </span>
                                 ))}
                             </div>

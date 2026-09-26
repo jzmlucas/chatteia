@@ -29,24 +29,29 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "INVALID_ENTRY" }, { status: 400 });
     }
 
-    const giveaways = await giveawayRepo.findOpenByChannel(platform, channelName);
-    const command = normalize(message).split(/\s+/)[0];
-    const matching = giveaways.filter((giveaway) => normalize(giveaway.trigger) === command);
+    try {
+        const giveaways = await giveawayRepo.findOpenByChannel(platform, channelName);
+        const command = normalize(message).split(/\s+/)[0];
+        const matching = giveaways.filter((giveaway) => normalize(giveaway.trigger) === command);
 
-    if (matching.length === 0) {
-        return NextResponse.json({ accepted: false });
+        if (matching.length === 0) {
+            return NextResponse.json({ accepted: false });
+        }
+
+        const updated = await giveawayRepo.addParticipant({
+            giveaway: matching[0],
+            username: username.slice(0, 64),
+            displayName: displayName.slice(0, 100) || username.slice(0, 64),
+            platform,
+            channelName: channelName.slice(0, 64),
+        });
+
+        return NextResponse.json({
+            accepted: Boolean(updated),
+            giveaway: updated ? toGiveawaySummary(updated) : null,
+        }, { headers: { "Cache-Control": "no-store" } });
+    } catch (error) {
+        console.error("[GIVEAWAY ENTRY] Falha ao registrar participante:", error);
+        return NextResponse.json({ error: "ENTRY_UNAVAILABLE" }, { status: 503 });
     }
-
-    const updated = await giveawayRepo.addParticipant({
-        giveaway: matching[0],
-        username: username.slice(0, 64),
-        displayName: displayName.slice(0, 100),
-        platform,
-        channelName: channelName.slice(0, 64),
-    });
-
-    return NextResponse.json({
-        accepted: Boolean(updated),
-        giveaway: updated ? toGiveawaySummary(updated) : null,
-    });
 }
