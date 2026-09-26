@@ -45,12 +45,14 @@ export default function GiveawaysPage() {
     const [trigger, setTrigger] = useState("!sorteio");
     const [durationEnabled, setDurationEnabled] = useState(false);
     const [durationMinutes, setDurationMinutes] = useState(10);
+    const [winnerCount, setWinnerCount] = useState(1);
     const [channels, setChannels] = useState<GiveawayChannel[]>([]);
     const [newPlatform, setNewPlatform] = useState<ChatPlatform>("twitch");
     const [newChannelName, setNewChannelName] = useState("");
 
     const [saving, setSaving] = useState(false);
     const [toggling, setToggling] = useState(false);
+    const [drawing, setDrawing] = useState(false);
     const [errorCode, setErrorCode] = useState<string | null>(null);
     const [savedAt, setSavedAt] = useState<number | null>(null);
 
@@ -92,6 +94,7 @@ export default function GiveawaysPage() {
                     setChannels(data.giveaway.channels);
                     setDurationEnabled(data.giveaway.durationSeconds !== null);
                     setDurationMinutes(Math.max(1, Math.round((data.giveaway.durationSeconds ?? 600) / 60)));
+                    setWinnerCount(data.giveaway.winnerCount ?? 1);
                 }
             })
             .catch(() => {
@@ -167,6 +170,7 @@ export default function GiveawaysPage() {
                     trigger,
                     channels,
                     durationSeconds: durationEnabled ? durationMinutes * 60 : null,
+                    winnerCount,
                 }),
             });
 
@@ -222,6 +226,35 @@ export default function GiveawaysPage() {
             setErrorCode("GENERIC");
         } finally {
             setToggling(false);
+        }
+    }
+
+    async function handleDraw() {
+        setDrawing(true);
+        setErrorCode(null);
+
+        try {
+            const response = await fetch("/api/giveaways/status", {
+                method: "PATCH",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "draw" }),
+            });
+            const data = (await response.json().catch(() => ({}))) as {
+                giveaway?: GiveawaySummary;
+                error?: string;
+            };
+
+            if (!response.ok) {
+                setErrorCode(data.error ?? "GENERIC");
+                return;
+            }
+
+            setState((current) => current ? { ...current, giveaway: data.giveaway ?? null } : current);
+        } catch {
+            setErrorCode("GENERIC");
+        } finally {
+            setDrawing(false);
         }
     }
 
@@ -401,6 +434,22 @@ export default function GiveawaysPage() {
                         )}
                     </div>
 
+                    <div className="mt-4 border border-zinc-800 bg-zinc-900/50 p-4">
+                        <label htmlFor="winner-count" className="text-sm font-medium text-zinc-200">
+                            {t("winnerCountLabel")}
+                        </label>
+                        <p className="mt-1 text-xs text-zinc-500">{t("winnerCountHint")}</p>
+                        <input
+                            id="winner-count"
+                            type="number"
+                            min={1}
+                            max={50}
+                            value={winnerCount}
+                            onChange={(event) => setWinnerCount(Math.min(50, Math.max(1, Number(event.target.value) || 1)))}
+                            className="mt-3 w-24 border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 outline-none focus:border-[#F55376]"
+                        />
+                    </div>
+
                     <div className="mt-6 border-t border-twitch-border pt-6">
                         <h2 className="text-sm font-semibold text-zinc-100">
                             {t("channelsLabel")}
@@ -505,6 +554,17 @@ export default function GiveawaysPage() {
                                       : t("openGiveaway")}
                             </button>
                         )}
+
+                        {giveaway && giveaway.participants.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={handleDraw}
+                                disabled={drawing || giveaway.status === "open"}
+                                className="flex-1 border border-amber-500/60 bg-amber-500/10 px-4 py-2.5 text-sm font-semibold text-amber-200 transition-colors hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {drawing ? t("drawing") : t("drawWinners")}
+                            </button>
+                        )}
                     </div>
 
                     {savedAt && (
@@ -543,6 +603,20 @@ export default function GiveawaysPage() {
 
                             {giveaway.participants.length === 0 && (
                                 <p className="mt-3 text-xs text-zinc-600">{t("noParticipants")}</p>
+                            )}
+
+                            {giveaway.winners.length > 0 && (
+                                <div className="mt-5 border-t border-amber-500/20 pt-4">
+                                    <h3 className="text-sm font-semibold text-amber-200">{t("winnersLabel")}</h3>
+                                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                        {giveaway.winners.map((winner, index) => (
+                                            <div key={`${winner.platform}:${winner.username}`} className="border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                                                <span className="mr-2 text-xs text-amber-300">#{index + 1}</span>
+                                                {winner.displayName ?? winner.username}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
                         </div>
                     )}

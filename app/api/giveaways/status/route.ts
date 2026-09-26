@@ -26,12 +26,32 @@ export async function PATCH(request: NextRequest) {
         return access.error;
     }
 
-    let body: { status?: unknown };
+    let body: { status?: unknown; action?: unknown };
 
     try {
         body = await request.json();
     } catch {
         return fail("INVALID_JSON", 400);
+    }
+
+    if (body.action === "draw") {
+        const existing = await giveawayRepo.findByOwner(access.userId);
+
+        if (!existing) {
+            return fail("GIVEAWAY_NOT_CONFIGURED", 404);
+        }
+
+        if (existing.participants.length === 0) {
+            return fail("NO_PARTICIPANTS", 400);
+        }
+
+        const drawn = await giveawayRepo.drawWinners(access.userId);
+
+        if (!drawn) {
+            return fail("GIVEAWAY_NOT_CONFIGURED", 404);
+        }
+
+        return NextResponse.json({ giveaway: toGiveawaySummary(drawn) });
     }
 
     if (body.status !== "open" && body.status !== "closed") {

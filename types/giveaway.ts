@@ -12,6 +12,8 @@ export const GIVEAWAY_TRIGGER_MAX_LENGTH = 32;
 export const GIVEAWAY_DURATION_MIN_SECONDS = 10;
 export const GIVEAWAY_DURATION_MAX_SECONDS = 24 * 60 * 60;
 export const GIVEAWAY_CHANNEL_NAME_MAX_LENGTH = 64;
+export const GIVEAWAY_WINNERS_MIN = 1;
+export const GIVEAWAY_WINNERS_MAX = 50;
 
 export type GiveawayStatus = "draft" | "open" | "closed";
 
@@ -23,6 +25,7 @@ export type GiveawayChannel = {
 
 export type GiveawayWinner = GiveawayChannel & {
     username: string;
+    displayName?: string;
 };
 
 export type GiveawayParticipant = {
@@ -42,6 +45,8 @@ export type GiveawayRow = {
     participants: GiveawayParticipant[];
     duration_seconds: number | null;
     deadline_at: Date | null;
+    winner_count: number;
+    winners: GiveawayWinner[];
     winner: GiveawayWinner | null;
     opened_at: Date | null;
     closed_at: Date | null;
@@ -57,6 +62,8 @@ export type GiveawaySummary = {
     participants: GiveawayParticipant[];
     durationSeconds: number | null;
     deadlineAt: string | null;
+    winnerCount: number;
+    winners: GiveawayWinner[];
     winner: GiveawayWinner | null;
     openedAt: string | null;
     closedAt: string | null;
@@ -71,6 +78,8 @@ export function toGiveawaySummary(row: GiveawayRow): GiveawaySummary {
         participants: row.participants ?? [],
         durationSeconds: row.duration_seconds,
         deadlineAt: row.deadline_at ? row.deadline_at.toISOString() : null,
+        winnerCount: row.winner_count ?? 1,
+        winners: row.winners ?? (row.winner ? [row.winner] : []),
         winner: row.winner,
         openedAt: row.opened_at ? row.opened_at.toISOString() : null,
         closedAt: row.closed_at ? row.closed_at.toISOString() : null,

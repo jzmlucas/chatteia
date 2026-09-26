@@ -7,6 +7,8 @@ import {
     GIVEAWAY_DURATION_MAX_SECONDS,
     GIVEAWAY_DURATION_MIN_SECONDS,
     GIVEAWAY_TRIGGER_MAX_LENGTH,
+    GIVEAWAY_WINNERS_MAX,
+    GIVEAWAY_WINNERS_MIN,
     MAX_GIVEAWAY_CHANNELS,
     isChatPlatform,
     toGiveawaySummary,
@@ -48,7 +50,7 @@ export async function PUT(request: NextRequest) {
         return access.error;
     }
 
-    let body: { trigger?: unknown; channels?: unknown; durationSeconds?: unknown };
+    let body: { trigger?: unknown; channels?: unknown; durationSeconds?: unknown; winnerCount?: unknown };
 
     try {
         body = await request.json();
@@ -71,6 +73,12 @@ export async function PUT(request: NextRequest) {
 
     if (durationSeconds !== null && (!Number.isInteger(durationSeconds) || durationSeconds < GIVEAWAY_DURATION_MIN_SECONDS || durationSeconds > GIVEAWAY_DURATION_MAX_SECONDS)) {
         return fail("INVALID_DURATION", 400);
+    }
+
+    const winnerCount = Number(body.winnerCount ?? 1);
+
+    if (!Number.isInteger(winnerCount) || winnerCount < GIVEAWAY_WINNERS_MIN || winnerCount > GIVEAWAY_WINNERS_MAX) {
+        return fail("INVALID_WINNER_COUNT", 400);
     }
 
     if (!Array.isArray(body.channels)) {
@@ -122,6 +130,7 @@ export async function PUT(request: NextRequest) {
         trigger: normalizedTrigger,
         channels,
         durationSeconds,
+        winnerCount,
     });
 
     return NextResponse.json({

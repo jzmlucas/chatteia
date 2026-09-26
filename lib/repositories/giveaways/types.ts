@@ -10,6 +10,7 @@ export type UpsertGiveawayInput = {
     trigger: string;
     channels: GiveawayChannel[];
     durationSeconds: number | null;
+    winnerCount: number;
 };
 
 export interface GiveawayRepository {
@@ -35,6 +36,8 @@ export interface GiveawayRepository {
         platform: GiveawayParticipant["platform"];
         channelName: string;
     }): Promise<GiveawayRow | null>;
+
+    drawWinners(ownerUserId: string): Promise<GiveawayRow | null>;
 
     delete(ownerUserId: string): Promise<void>;
 }
