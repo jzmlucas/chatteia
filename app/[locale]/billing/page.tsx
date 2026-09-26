@@ -164,7 +164,6 @@ function BillingContent() {
         }, POLL_INTERVAL_MS);
 
         return () => clearInterval(timer);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [checkoutParam, subscribed]);
 
     async function redirectTo(
