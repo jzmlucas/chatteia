@@ -4,6 +4,8 @@ import { requireStreamerAccess } from "@/lib/billing/requireStreamerAccess";
 import { giveawayRepo } from "@/lib/repositories/giveaways";
 import {
     GIVEAWAY_CHANNEL_NAME_MAX_LENGTH,
+    GIVEAWAY_DURATION_MAX_SECONDS,
+    GIVEAWAY_DURATION_MIN_SECONDS,
     GIVEAWAY_TRIGGER_MAX_LENGTH,
     MAX_GIVEAWAY_CHANNELS,
     isChatPlatform,
@@ -46,7 +48,7 @@ export async function PUT(request: NextRequest) {
         return access.error;
     }
 
-    let body: { trigger?: unknown; channels?: unknown };
+    let body: { trigger?: unknown; channels?: unknown; durationSeconds?: unknown };
 
     try {
         body = await request.json();
@@ -57,8 +59,18 @@ export async function PUT(request: NextRequest) {
     const trigger =
         typeof body.trigger === "string" ? body.trigger.trim() : "";
 
-    if (!trigger || !trigger.startsWith("!") || trigger.length > GIVEAWAY_TRIGGER_MAX_LENGTH) {
+    const normalizedTrigger = trigger.replace(/^!+/, "").trim();
+
+    if (!normalizedTrigger || normalizedTrigger.length > GIVEAWAY_TRIGGER_MAX_LENGTH || /\s/.test(normalizedTrigger)) {
         return fail("INVALID_TRIGGER", 400);
+    }
+
+    const durationSeconds = body.durationSeconds === null || body.durationSeconds === undefined || body.durationSeconds === ""
+        ? null
+        : Number(body.durationSeconds);
+
+    if (durationSeconds !== null && (!Number.isInteger(durationSeconds) || durationSeconds < GIVEAWAY_DURATION_MIN_SECONDS || durationSeconds > GIVEAWAY_DURATION_MAX_SECONDS)) {
+        return fail("INVALID_DURATION", 400);
     }
 
     if (!Array.isArray(body.channels)) {
@@ -107,8 +119,9 @@ export async function PUT(request: NextRequest) {
     }
 
     const row = await giveawayRepo.upsert(access.userId, {
-        trigger,
+        trigger: normalizedTrigger,
         channels,
+        durationSeconds,
     });
 
     return NextResponse.json({

@@ -3,11 +3,13 @@ import type {
     GiveawayRow,
     GiveawayStatus,
     GiveawayWinner,
+    GiveawayParticipant,
 } from "@/types/giveaway";
 
 export type UpsertGiveawayInput = {
     trigger: string;
     channels: GiveawayChannel[];
+    durationSeconds: number | null;
 };
 
 export interface GiveawayRepository {
@@ -23,6 +25,16 @@ export interface GiveawayRepository {
         status: GiveawayStatus,
         winner?: GiveawayWinner | null
     ): Promise<GiveawayRow | null>;
+
+    findOpenByChannel(platform: GiveawayParticipant["platform"], channelName: string): Promise<GiveawayRow[]>;
+
+    addParticipant(input: {
+        giveaway: GiveawayRow;
+        username: string;
+        displayName: string;
+        platform: GiveawayParticipant["platform"];
+        channelName: string;
+    }): Promise<GiveawayRow | null>;
 
     delete(ownerUserId: string): Promise<void>;
 }

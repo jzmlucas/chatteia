@@ -9,6 +9,8 @@ import type { ChatPlatform } from "@/lib/chat/types";
 export const MAX_GIVEAWAY_CHANNELS = 4;
 
 export const GIVEAWAY_TRIGGER_MAX_LENGTH = 32;
+export const GIVEAWAY_DURATION_MIN_SECONDS = 10;
+export const GIVEAWAY_DURATION_MAX_SECONDS = 24 * 60 * 60;
 export const GIVEAWAY_CHANNEL_NAME_MAX_LENGTH = 64;
 
 export type GiveawayStatus = "draft" | "open" | "closed";
@@ -23,12 +25,23 @@ export type GiveawayWinner = GiveawayChannel & {
     username: string;
 };
 
+export type GiveawayParticipant = {
+    username: string;
+    displayName: string;
+    platform: ChatPlatform;
+    channelName: string;
+    joinedAt: string;
+};
+
 /** Linha da tabela `giveaways` (ver postgres/migrations/0003_giveaways.sql). */
 export type GiveawayRow = {
     owner_user_id: string;
     trigger: string;
     status: GiveawayStatus;
     channels: GiveawayChannel[];
+    participants: GiveawayParticipant[];
+    duration_seconds: number | null;
+    deadline_at: Date | null;
     winner: GiveawayWinner | null;
     opened_at: Date | null;
     closed_at: Date | null;
@@ -41,6 +54,9 @@ export type GiveawaySummary = {
     trigger: string;
     status: GiveawayStatus;
     channels: GiveawayChannel[];
+    participants: GiveawayParticipant[];
+    durationSeconds: number | null;
+    deadlineAt: string | null;
     winner: GiveawayWinner | null;
     openedAt: string | null;
     closedAt: string | null;
@@ -52,6 +68,9 @@ export function toGiveawaySummary(row: GiveawayRow): GiveawaySummary {
         trigger: row.trigger,
         status: row.status,
         channels: row.channels,
+        participants: row.participants ?? [],
+        durationSeconds: row.duration_seconds,
+        deadlineAt: row.deadline_at ? row.deadline_at.toISOString() : null,
         winner: row.winner,
         openedAt: row.opened_at ? row.opened_at.toISOString() : null,
         closedAt: row.closed_at ? row.closed_at.toISOString() : null,

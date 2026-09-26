@@ -61,6 +61,43 @@ export function ChatFeed({
     variant?: "default" | "obs";
     obsSettings?: ObsChatSettings;
 }) {
+    const giveawayMessagesRef = useRef<Set<string>>(new Set());
+
+    useEffect(() => {
+        for (const message of messages) {
+            const key = `${message.platform}:${message.channel}:${message.id}`;
+
+            if (giveawayMessagesRef.current.has(key)) {
+                continue;
+            }
+
+            giveawayMessagesRef.current.add(key);
+            const firstWord = message.message.trim().split(/\s+/)[0] ?? "";
+
+            if (!/^!?[a-zA-Z0-9_]{1,32}$/.test(firstWord)) {
+                continue;
+            }
+
+            void fetch("/api/giveaways/entry", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    platform: message.platform,
+                    channelName: message.channel,
+                    username: message.username,
+                    displayName: message.displayName,
+                    message: message.message,
+                }),
+            }).catch(() => undefined);
+        }
+
+        if (giveawayMessagesRef.current.size > 5000) {
+            giveawayMessagesRef.current = new Set(
+                messages.map((message) => `${message.platform}:${message.channel}:${message.id}`)
+            );
+        }
+    }, [messages]);
+
     const activity =
         useChatActivity(
             messages

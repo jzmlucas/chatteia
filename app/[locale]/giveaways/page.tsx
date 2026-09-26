@@ -43,6 +43,8 @@ export default function GiveawaysPage() {
     const [fetchError, setFetchError] = useState(false);
 
     const [trigger, setTrigger] = useState("!sorteio");
+    const [durationEnabled, setDurationEnabled] = useState(false);
+    const [durationMinutes, setDurationMinutes] = useState(10);
     const [channels, setChannels] = useState<GiveawayChannel[]>([]);
     const [newPlatform, setNewPlatform] = useState<ChatPlatform>("twitch");
     const [newChannelName, setNewChannelName] = useState("");
@@ -88,6 +90,8 @@ export default function GiveawaysPage() {
                 if (data.giveaway) {
                     setTrigger(data.giveaway.trigger);
                     setChannels(data.giveaway.channels);
+                    setDurationEnabled(data.giveaway.durationSeconds !== null);
+                    setDurationMinutes(Math.max(1, Math.round((data.giveaway.durationSeconds ?? 600) / 60)));
                 }
             })
             .catch(() => {
@@ -104,6 +108,22 @@ export default function GiveawaysPage() {
     const maxChannels = state?.maxChannels ?? 4;
     const giveaway = state?.giveaway ?? null;
     const isOpen = giveaway?.status === "open";
+
+    useEffect(() => {
+        if (!isOpen || !gated) {
+            return;
+        }
+
+        const refresh = () => {
+            void fetch("/api/giveaways", { credentials: "include" })
+                .then((response) => response.json() as Promise<LoadState>)
+                .then((data) => setState(data))
+                .catch(() => undefined);
+        };
+
+        const timer = window.setInterval(refresh, 5000);
+        return () => window.clearInterval(timer);
+    }, [gated, isOpen]);
 
     function addChannel() {
         const name = newChannelName.trim();
@@ -143,7 +163,11 @@ export default function GiveawaysPage() {
                 method: "PUT",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ trigger, channels }),
+                body: JSON.stringify({
+                    trigger,
+                    channels,
+                    durationSeconds: durationEnabled ? durationMinutes * 60 : null,
+                }),
             });
 
             const data = (await response.json().catch(() => ({}))) as {
@@ -157,10 +181,10 @@ export default function GiveawaysPage() {
                 return;
             }
 
-            setState({
+                    setState({
                 giveaway: data.giveaway ?? null,
                 maxChannels: data.maxChannels ?? maxChannels,
-            });
+                    });
             setSavedAt(Date.now());
         } catch {
             setErrorCode("GENERIC");
@@ -327,6 +351,32 @@ export default function GiveawaysPage() {
                         className="mt-3 w-full border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-zinc-100 outline-none focus:border-[#F55376]"
                     />
 
+                    <div className="mt-4 border border-zinc-800 bg-zinc-900/50 p-4">
+                        <label className="flex items-center gap-3 text-sm text-zinc-200">
+                            <input
+                                type="checkbox"
+                                checked={durationEnabled}
+                                onChange={(event) => setDurationEnabled(event.target.checked)}
+                                className="h-4 w-4 accent-[#F55376]"
+                            />
+                            {t("timerLabel")}
+                        </label>
+
+                        {durationEnabled && (
+                            <div className="mt-3 flex items-center gap-2 text-sm text-zinc-400">
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={1440}
+                                    value={durationMinutes}
+                                    onChange={(event) => setDurationMinutes(Math.min(1440, Math.max(1, Number(event.target.value) || 1)))}
+                                    className="w-24 border border-zinc-700 bg-zinc-900 px-3 py-2 text-zinc-100 outline-none focus:border-[#F55376]"
+                                />
+                                {t("minutes")}
+                            </div>
+                        )}
+                    </div>
+
                     <div className="mt-6 border-t border-twitch-border pt-6">
                         <h2 className="text-sm font-semibold text-zinc-100">
                             {t("channelsLabel")}
@@ -435,6 +485,41 @@ export default function GiveawaysPage() {
 
                     {savedAt && (
                         <p className="mt-3 text-center text-xs text-emerald-400">{t("saved")}</p>
+                    )}
+
+                    {giveaway && (
+                        <div className="mt-6 border-t border-twitch-border pt-6">
+                            <div className="flex items-center justify-between gap-3">
+                                <h2 className="text-sm font-semibold text-zinc-100">
+                                    {t("participantsLabel")}
+                                </h2>
+                                <span className="text-xs text-zinc-500">
+                                    {t("participantsCount", { count: giveaway.participants.length })}
+                                </span>
+                            </div>
+
+                            {giveaway.deadlineAt && isOpen && (
+                                <p className="mt-1 text-xs text-amber-300">
+                                    {t("timerActive", { date: new Date(giveaway.deadlineAt).toLocaleTimeString() })}
+                                </p>
+                            )}
+
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                {giveaway.participants.map((participant) => (
+                                    <span
+                                        key={`${participant.platform}:${participant.username}`}
+                                        className="border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs text-zinc-200"
+                                        title={`${participant.displayName} · ${participant.platform}`}
+                                    >
+                                        {participant.displayName}
+                                    </span>
+                                ))}
+                            </div>
+
+                            {giveaway.participants.length === 0 && (
+                                <p className="mt-3 text-xs text-zinc-600">{t("noParticipants")}</p>
+                            )}
+                        </div>
                     )}
                 </section>
             </div>
